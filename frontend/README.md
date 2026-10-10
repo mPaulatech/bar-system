@@ -1,32 +1,39 @@
-# React + TypeScript + Vite
+# Dona Bier - Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Interface web do sistema de gestão centralizada do bar Dona Bier. O design foi criado com o Framer AI.
 
-Currently, two official plugins are available:
+## Tecnologias
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+<p>
+  <img src="https://skillicons.dev/icons?i=html,css,js,ts,react,redux,vite" alt="HTML, CSS, JavaScript, TypeScript, React, Redux e Vite" />
+</p>
 
-## React Compiler
+- HTML, CSS e JavaScript
+- React
+- TypeScript
+- Redux
+- Vite
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Como rodar
 
-## Expanding the Oxlint configuration
+Pré-requisito: [Node.js](https://nodejs.org) instalado.
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm install
+npm run dev
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+O projeto abre em `http://localhost:5173`.
+
+## Build de produção
+
+```bash
+npm run build
+npm run preview
+```
+
+## Fluxo de trabalho
+
+- Crie sua branch a partir da `develop`.
+- Envie as alterações por Pull Request.
+- A `main` recebe código apenas da `develop`.
