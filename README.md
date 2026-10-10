@@ -37,8 +37,6 @@ Ainda não desenvolvido.
 
 ## Integrantes
 
-- Nome 1
-- Nome 2
-- Nome 3
-- Nome 4
-- Nome 5
+- Maria Paula De Carvalho Silva (Frontend)
+- Aline Aparecida Da Silva (Backend)
+- Murillo Augusto Pereira De Araujo (Backend)
