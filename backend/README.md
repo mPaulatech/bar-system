@@ -164,14 +164,16 @@ Perfis:
 
 ## Rotas da API
 
-Todas as rotas começam com `/v1`. A tabela é preenchida conforme cada etapa é concluída.
+Todas as rotas começam com `/v1`. A tabela abaixo registra o contrato de cada
+rota: método, URL, perfil necessário, corpo esperado e exemplo de resposta.
+As rotas marcadas como **planejada** ainda não estão montadas no Express.
 
-| Módulo | Método e rota | Perfil | O que faz | Etapa |
-|---|---|---|---|---|
-| Saúde | `GET /v1/saude` | público | Verifica se a API está no ar | 1 |
-| Autenticação | `POST /v1/autenticacao/registro-estabelecimento` | público | Cria a casa de shows e o primeiro gestor | 3 |
-| Autenticação | `POST /v1/autenticacao/login` | público | Faz login e devolve o token | 3 |
-| *(demais rotas)* | | | *(preencher a cada etapa)* | 3 a 15 |
+| Módulo | Método | URL | Perfil | Corpo esperado | Exemplo de resposta | Status |
+|---|---|---|---|---|---|---|
+| Saúde | `GET` | `/v1/saude` | Público | Nenhum corpo | `200 OK`<br>`{ "status": "ok" }` | Implementada |
+| Autenticação | `POST` | `/v1/autenticacao/registro-estabelecimento` | Público | `{ "nomeFantasia": "Dona Bier", "razaoSocial": "Dona Bier Eventos Ltda.", "cnpj": "12.345.678/0001-90", "emailContato": "contato@donabier.example", "nomeGestor": "Marina Gestora", "emailGestor": "gestor@donabier.example", "senhaGestor": "Gestor@123456" }` | `201 Created`<br>`{ "estabelecimento": { "id": 1, "nomeFantasia": "Dona Bier" }, "gestor": { "id": 1, "email": "gestor@donabier.example" } }` | Planejada |
+| Autenticação | `POST` | `/v1/autenticacao/login` | Público | `{ "email": "gestor@donabier.example", "senha": "Gestor@123456" }` | `200 OK`<br>`{ "token": "<JWT>", "usuario": { "id": 1, "nome": "Marina Gestora", "perfil": "GESTOR" } }` | Planejada |
+| Integração de consumo | `POST` | `/v1/integrations/consumption` | Sistema parceiro com `x-api-key` | Cabeçalho `x-api-key: <chave-da-api>` e `{ "idTransacaoExterna": "PDV-2026-0001", "valorTotal": 72.5, "dataHoraTransacao": "2026-11-20T22:30:00-03:00", "cpfCliente": "111.111.111-11", "itens": [{ "nome": "Chopp", "quantidade": 2 }] }` | `201 Created`<br>`{ "id": 1, "idTransacaoExterna": "PDV-2026-0001", "status": "recebida" }` | Planejada |
 
 ## Integração com sistemas externos (API de consumo)
 
