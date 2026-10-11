@@ -1,6 +1,6 @@
-# Dona Bier: API do Back-end
+#API do Back-end
 
-API do **Sistema de Gestão e Inteligência de Clientes** para casas de shows, desenvolvida como projeto acadêmico na **Fatec Guaratinguetá**, tendo o bar **Dona Bier** como caso de uso.
+API do **Sistema de Gestão e Inteligência de Clientes** para casas de shows, desenvolvida como projeto acadêmico na **Fatec Guaratinguetá**
 
 > Este README é completado ao longo do desenvolvimento. Onde estiver escrito **(preencher na Etapa N)**, a informação entra quando a etapa correspondente for concluída.
 
