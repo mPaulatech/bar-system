@@ -1,208 +1,42 @@
-# Dona Bier: API do Back-end
+# bar-system
+Projeto acadêmico: sistema de centralização e gestão de bares (Fatec Guaratinguetá).
 
-API do **Sistema de Gestão e Inteligência de Clientes** para casas de shows, desenvolvida como projeto acadêmico na **Fatec Guaratinguetá**, tendo o bar **Dona Bier** como caso de uso.
+## Estrutura
 
-O sistema centraliza a venda de ingressos, o histórico de cada cliente e os dados de consumo vindos de outros sistemas (como o do bar), e transforma tudo isso em indicadores (KPIs), segmentação de público e recomendações para a gestão.
+```
+bar-system/
+├── frontend/
+└── backend/
+```
 
-> Este README é completado ao longo do desenvolvimento. Onde estiver escrito **(preencher na Etapa N)**, a informação entra quando a etapa correspondente for concluída.
+## Frontend
 
----
+Interface web do sistema. O design foi criado com o Framer AI.
 
-## O problema que resolvemos
+**Tecnologias**
 
-Casas de shows usam vários sistemas isolados (venda online, venda na porta, promoções, restrições de clientes). A equipe precisa consultar cada um separadamente para atender o cliente, e a gestão precisa cruzar relatórios na mão para fechar o resultado da noite. Este sistema reúne esses dados em um só lugar.
+![HTML](https://img.shields.io/badge/HTML-E34F26?style=for-the-badge&logo=html5&logoColor=white)
+![CSS](https://img.shields.io/badge/CSS-1572B6?style=for-the-badge&logo=css3&logoColor=white)
+![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
+![React](https://img.shields.io/badge/React-61DAFB?style=for-the-badge&logo=react&logoColor=black)
+![Redux](https://img.shields.io/badge/Redux-764ABC?style=for-the-badge&logo=redux&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)
 
-## O que o sistema faz
-
-- Cadastro da casa de shows e dos eventos (multi-tenant: cada casa só enxerga os próprios dados)
-- Criação de lotes e tipos de ingresso
-- Venda de ingressos na portaria (PDV), com um código único por ingresso
-- Check-in e controle de acesso pelo código do ingresso
-- API de integração para receber o consumo de sistemas parceiros (bar, PDV)
-- Cruzamento do consumo com o cadastro único do cliente e com o evento
-- Ficha única do cliente, com histórico de vários eventos
-- Alertas e restrições (pendências, débitos)
-- Segmentação do público (frequentes, ausentes, VIPs, aniversariantes)
-- Dashboard de performance, curva ABC de clientes e recomendações para o gestor
-
-## Tecnologias
-
-| Tecnologia | Uso |
-|---|---|
-| Node.js 20+ (JavaScript) | Ambiente de execução |
-| Express | Servidor e rotas da API |
-| PostgreSQL + Prisma | Banco de dados e acesso a ele |
-| Zod | Validação dos dados recebidos |
-| jsonwebtoken + bcryptjs | Login (JWT) e senhas criptografadas |
-| helmet, cors, express-rate-limit | Segurança da API |
-| `node --test` | Testes automatizados |
-
-## Pré-requisitos
-
-- [Node.js](https://nodejs.org) 20 ou mais novo (`node -v`)
-- [Git](https://git-scm.com)
-- Um banco PostgreSQL (recomendado: projeto gratuito no [Neon](https://neon.com); ou PostgreSQL local)
-
-## Como rodar o projeto
+**Como rodar**
 
 ```bash
-# 1. clonar o repositório e entrar na pasta do back-end
-git clone <URL-DO-REPOSITORIO>
-cd <pasta-do-repositorio>/backend
-
-# 2. instalar as dependências
+cd frontend
 npm install
-
-# 3. criar o arquivo de configuração a partir do exemplo
-cp .env.example .env
-# abra o .env e preencha os valores (veja a tabela abaixo)
-
-# 4. criar as tabelas no banco
-npx prisma migrate dev
-
-# 5. popular com dados de exemplo
-npx prisma db seed
-
-# 6. subir a API em modo desenvolvimento
 npm run dev
 ```
 
-A API sobe em `http://localhost:<PORTA>` e a rota `GET /v1/saude` responde `{ "status": "ok" }`.
+## Backend
 
-### Variáveis de ambiente
+Ainda não desenvolvido.
 
-> **Nunca** envie o arquivo `.env` para o GitHub. Ele guarda segredos.
+## Integrantes
 
-| Variável | Para que serve | Exemplo |
-|---|---|---|
-| `DATABASE_URL` | Endereço do banco PostgreSQL | `postgresql://usuario:senha@host/banco?sslmode=require` |
-| `JWT_SECRET` | Segredo que assina os tokens de login (use um texto longo e aleatório) | *(gere um valor próprio)* |
-| `JWT_EXPIRA_EM` | Validade do token de login | `8h` |
-| `PORTA` | Porta em que a API roda | `3000` |
-| `FRONTEND_URL` | Endereço do front-end liberado no CORS | `http://localhost:5173` |
-
-*(Conferir esta tabela com o `.env.example` na Etapa 16.)*
-
-### Comandos úteis
-
-| Comando | O que faz |
-|---|---|
-| `npm run dev` | Sobe a API reiniciando sozinha a cada alteração |
-| `npm start` | Sobe a API (modo normal) |
-| `npm test` | Roda os testes automatizados |
-| `npx prisma migrate dev` | Cria/atualiza as tabelas no banco |
-| `npx prisma db seed` | Popula o banco com dados de exemplo |
-| `npx prisma studio` | Abre uma tela no navegador para ver o banco |
-
-### Usuários do seed (dados fictícios)
-
-*(preencher na Etapa 2: e-mails e senhas de teste do gestor e do funcionário criados pelo seed.)*
-
----
-
-## Estrutura de pastas
-
-```
-backend/
-├── prisma/
-│   ├── schema.prisma        # modelo do banco
-│   └── seed.js              # dados de exemplo
-├── docs/
-│   ├── banco-de-dados.md    # diagrama, explicação e SQL das tabelas
-│   ├── tabelas.sql          # SQL das tabelas (referência)
-│   └── api-integracao.md    # como sistemas parceiros enviam consumo
-├── src/
-│   ├── app.js               # configuração do Express
-│   ├── servidor.js          # inicialização do servidor
-│   ├── configuracao/        # leitura das variáveis de ambiente
-│   ├── banco/               # conexão única com o banco (Prisma)
-│   ├── middlewares/         # autenticação, perfis, API Key, erros, validação
-│   ├── utilitarios/         # funções auxiliares
-│   └── modulos/             # um módulo por assunto
-│       ├── autenticacao/
-│       ├── estabelecimentos/
-│       ├── eventos/
-│       ├── ingressos/
-│       ├── checkin/
-│       ├── clientes/
-│       ├── integracoes/
-│       ├── segmentacao/
-│       ├── kpis/
-│       └── recomendacoes/
-└── testes/
-```
-
-Cada módulo segue o mesmo padrão: `*.rotas.js` (URLs), `*.controlador.js` (recebe e responde) e `*.servico.js` (regra de negócio).
-
-## Banco de dados
-
-O modelo tem 9 tabelas, todas ligadas a um estabelecimento (isolamento multi-tenant). O diagrama completo, a explicação de cada tabela e o SQL estão em [`docs/banco-de-dados.md`](docs/banco-de-dados.md).
-
-Tabelas: `estabelecimentos`, `usuarios`, `eventos`, `clientes`, `restricoes_clientes`, `ingressos_tipos`, `vendas_ingressos`, `vendas_consumo_api`, `recomendacoes_gestao`.
-
----
-
-## Autenticação
-
-Há duas formas de acesso:
-
-1. **Usuários do sistema (gestor e funcionário):** fazem login e recebem um token JWT, enviado em todas as requisições no cabeçalho:
-   ```
-   Authorization: Bearer <token>
-   ```
-2. **Sistemas parceiros (integração de consumo):** usam uma chave de API enviada no cabeçalho `x-api-key`.
-
-*(Detalhar o fluxo de login com exemplos na Etapa 3.)*
-
-Perfis:
-
-| Perfil | Pode |
-|---|---|
-| `GESTOR` | Tudo: configurações, eventos, lotes, restrições, KPIs, recomendações, funcionários |
-| `FUNCIONARIO` | Vender ingresso, fazer check-in e consultar clientes e eventos |
-
-## Rotas da API
-
-Todas as rotas começam com `/v1`. A tabela é preenchida conforme cada etapa é concluída.
-
-| Módulo | Método e rota | Perfil | O que faz | Etapa |
-|---|---|---|---|---|
-| Saúde | `GET /v1/saude` | público | Verifica se a API está no ar | 1 |
-| Autenticação | `POST /v1/autenticacao/registro-estabelecimento` | público | Cria a casa de shows e o primeiro gestor | 3 |
-| Autenticação | `POST /v1/autenticacao/login` | público | Faz login e devolve o token | 3 |
-| *(demais rotas)* | | | *(preencher a cada etapa)* | 3 a 15 |
-
-## Integração com sistemas externos (API de consumo)
-
-Sistemas parceiros enviam as vendas de consumo (bar, comidas) para `POST /v1/integrations/consumption`, autenticando com `x-api-key`. A mesma venda enviada duas vezes não é duplicada.
-
-Guia completo para quem integra: [`docs/api-integracao.md`](docs/api-integracao.md) *(preencher na Etapa 7)*.
-
-## Segurança
-
-- O `estabelecimento_id` sempre vem do token, nunca do que o cliente envia, e toda consulta filtra por ele
-- Senhas e chaves de API guardadas apenas com hash
-- Todos os dados recebidos são validados com Zod
-- Limite de requisições, `helmet` e CORS restrito ao front-end
-- Estoque de ingressos e check-in são operações atômicas (sem venda duplicada nem ingresso usado duas vezes)
-- CPF e outros dados pessoais não aparecem em logs (LGPD)
-
-## Testes
-
-```bash
-npm test
-```
-
-*(Listar o que é coberto: isolamento entre estabelecimentos, estoque, check-in, idempotência da API de consumo, KPIs. Preencher na Etapa 16.)*
-
----
-
-## Equipe e contexto
-
-Projeto acadêmico da **Fatec Guaratinguetá**.
-
-| Integrante | Responsabilidade |
-|---|---|
-| *(nome)* | *(back-end / front-end / banco / documentação)* |
-
-O front-end está na pasta [`../frontend`](../frontend) (design criado com o Framer AI).
+- Maria Paula De Carvalho Silva (Frontend)
+- Aline Aparecida Da Silva (Backend)
+- Murillo Augusto Pereira De Araujo (Backend)
