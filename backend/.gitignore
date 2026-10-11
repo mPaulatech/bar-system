@@ -1,0 +1,13 @@
+   # dependências
+   node_modules/
+
+   # SEGREDOS: nunca vão para o GitHub
+   .env
+   .env.*
+   !.env.example
+
+   # arquivos gerados / sistema
+   dist/
+   coverage/
+   *.log
+   .DS_Store

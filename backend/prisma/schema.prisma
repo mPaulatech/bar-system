@@ -1,0 +1,339 @@
+// ============================================================================
+// Schema do banco de dados - Sistema Dona Bier (Gestão e Inteligência de Clientes)
+//
+// Onde colocar este arquivo:  backend/prisma/schema.prisma
+//
+// Convenções usadas aqui:
+//  - Nomes dos modelos e campos em português (camelCase), como o resto do código.
+//  - @@map / @map fazem o Prisma gravar no banco com os nomes em snake_case do
+//    diagrama (ex.: campo `estabelecimentoId` vira a coluna `estabelecimento_id`).
+//  - TODA tabela de negócio tem `estabelecimentoId`: é isso que separa os dados
+//    de uma casa de shows dos de outra (multi-tenant).
+//  - Dinheiro sempre em Decimal(12,2), nunca Float.
+// ============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// ENUMS (listas fechadas de valores permitidos)
+// ---------------------------------------------------------------------------
+
+/// Perfil de acesso do usuário do sistema.
+enum PerfilUsuario {
+  GESTOR
+  FUNCIONARIO
+}
+
+/// Situação do evento. Só eventos ATIVOS aceitam check-in e cruzamento de consumo.
+enum StatusEvento {
+  RASCUNHO
+  ATIVO
+  ENCERRADO
+}
+
+/// Situação da venda do ingresso (permite estornar sem apagar o registro).
+enum StatusVenda {
+  CONFIRMADA
+  ESTORNADA
+}
+
+/// Situação da entrada do cliente no evento.
+enum StatusCheckin {
+  PENDENTE
+  UTILIZADO
+}
+
+/// Tipo da restrição aplicada a um cliente.
+enum TipoRestricao {
+  DEBITO
+  COMPORTAMENTO
+  OUTRO
+}
+
+/// Situação da restrição (resolvida não é apagada: fica no histórico).
+enum StatusRestricao {
+  ATIVA
+  RESOLVIDA
+}
+
+/// Categoria da recomendação gerada para o gestor.
+enum TipoInsight {
+  PROGRAMACAO
+  PRECIFICACAO
+  RECUPERACAO_CLIENTES
+  CONSUMO
+}
+
+/// Andamento da recomendação para o gestor.
+enum StatusRecomendacao {
+  NOVA
+  VISTA
+  APLICADA
+  DESCARTADA
+}
+
+// ---------------------------------------------------------------------------
+// ESTABELECIMENTOS (o "cliente" do SaaS: a casa de shows)
+// ---------------------------------------------------------------------------
+model Estabelecimento {
+  id             Int      @id @default(autoincrement())
+  nomeFantasia   String   @map("nome_fantasia")
+  razaoSocial    String   @map("razao_social")
+  cnpj           String   @unique
+  emailContato   String   @map("email_contato")
+
+  /// Só guardamos o HASH (SHA-256) da API Key; a chave em texto puro é mostrada uma vez.
+  apiKeyHash     String?  @unique @map("api_key_hash")
+  /// Primeiros caracteres da chave, só para o gestor reconhecer qual é.
+  apiKeyPrefixo  String?  @map("api_key_prefixo")
+
+  criadoEm       DateTime @default(now()) @map("criado_em")
+  atualizadoEm   DateTime @updatedAt @map("atualizado_em")
+
+  usuarios         Usuario[]
+  eventos          Evento[]
+  clientes         Cliente[]
+  ingressosTipos   IngressoTipo[]
+  vendasIngressos  VendaIngresso[]
+  vendasConsumo    VendaConsumoApi[]
+  restricoes       RestricaoCliente[]
+  recomendacoes    RecomendacaoGestao[]
+
+  @@map("estabelecimentos")
+}
+
+// ---------------------------------------------------------------------------
+// USUARIOS (gestores e funcionários que usam o sistema)
+// ---------------------------------------------------------------------------
+model Usuario {
+  id                Int           @id @default(autoincrement())
+  estabelecimentoId Int           @map("estabelecimento_id")
+  nome              String
+  cpf               String?
+  /// E-mail único no sistema inteiro: é o que o usuário digita para logar,
+  /// então não pode se repetir entre estabelecimentos.
+  email             String        @unique
+  senhaHash         String        @map("senha_hash")
+  perfil            PerfilUsuario
+  ativo             Boolean       @default(true)
+  criadoEm          DateTime      @default(now()) @map("criado_em")
+  atualizadoEm      DateTime      @updatedAt @map("atualizado_em")
+
+  estabelecimento   Estabelecimento @relation(fields: [estabelecimentoId], references: [id])
+
+  vendasRealizadas     VendaIngresso[]     @relation("VendedorDaVenda")
+  checkinsRealizados   VendaIngresso[]     @relation("ResponsavelPeloCheckin")
+  restricoesCriadas    RestricaoCliente[]  @relation("RestricaoCriadaPor")
+  restricoesResolvidas RestricaoCliente[]  @relation("RestricaoResolvidaPor")
+
+  @@index([estabelecimentoId])
+  @@map("usuarios")
+}
+
+// ---------------------------------------------------------------------------
+// EVENTOS (shows e noites da casa)
+// ---------------------------------------------------------------------------
+model Evento {
+  id                Int          @id @default(autoincrement())
+  estabelecimentoId Int          @map("estabelecimento_id")
+  nome              String
+  generoMusical     String       @map("genero_musical")
+  atracoes          String?
+  dataHora          DateTime     @map("data_hora")
+  /// Duração prevista. O cruzamento usa isso para descobrir a qual evento
+  /// pertence uma venda de consumo que chegou sem evento informado.
+  duracaoHoras      Int          @default(12) @map("duracao_horas")
+  status            StatusEvento @default(RASCUNHO)
+  criadoEm          DateTime     @default(now()) @map("criado_em")
+  atualizadoEm      DateTime     @updatedAt @map("atualizado_em")
+
+  estabelecimento   Estabelecimento @relation(fields: [estabelecimentoId], references: [id])
+
+  ingressosTipos    IngressoTipo[]
+  vendasIngressos   VendaIngresso[]
+  vendasConsumo     VendaConsumoApi[]
+
+  @@index([estabelecimentoId, dataHora])
+  @@index([estabelecimentoId, status])
+  @@map("eventos")
+}
+
+// ---------------------------------------------------------------------------
+// CLIENTES (identidade única do frequentador dentro de cada casa)
+// ---------------------------------------------------------------------------
+model Cliente {
+  id                Int       @id @default(autoincrement())
+  estabelecimentoId Int       @map("estabelecimento_id")
+  nome              String
+  cpf               String
+  dataNascimento    DateTime? @db.Date @map("data_nascimento")
+  /// Opcionais: necessários no futuro para enviar promoções.
+  telefone          String?
+  email             String?
+  criadoEm          DateTime  @default(now()) @map("criado_em")
+  atualizadoEm      DateTime  @updatedAt @map("atualizado_em")
+
+  estabelecimento   Estabelecimento @relation(fields: [estabelecimentoId], references: [id])
+
+  vendasIngressos   VendaIngresso[]
+  vendasConsumo     VendaConsumoApi[]
+  restricoes        RestricaoCliente[]
+
+  /// Garante um único cadastro por CPF dentro de cada estabelecimento.
+  @@unique([estabelecimentoId, cpf])
+  @@index([estabelecimentoId, nome])
+  @@map("clientes")
+}
+
+// ---------------------------------------------------------------------------
+// RESTRICOES_CLIENTES (pendências, débitos, brigas...)
+// Substitui o campo único "observacao_restricao": agora há histórico,
+// quem criou, quem resolveu e se bloqueia a entrada.
+// ---------------------------------------------------------------------------
+model RestricaoCliente {
+  id                Int             @id @default(autoincrement())
+  estabelecimentoId Int             @map("estabelecimento_id")
+  clienteId         Int             @map("cliente_id")
+  tipo              TipoRestricao
+  descricao         String
+  bloqueiaEntrada   Boolean         @default(false) @map("bloqueia_entrada")
+  status            StatusRestricao @default(ATIVA)
+  criadoPorId       Int             @map("criado_por_id")
+  criadoEm          DateTime        @default(now()) @map("criado_em")
+  resolvidoPorId    Int?            @map("resolvido_por_id")
+  resolvidoEm       DateTime?       @map("resolvido_em")
+
+  estabelecimento   Estabelecimento @relation(fields: [estabelecimentoId], references: [id])
+  cliente           Cliente         @relation(fields: [clienteId], references: [id])
+  criadoPor         Usuario         @relation("RestricaoCriadaPor", fields: [criadoPorId], references: [id])
+  resolvidoPor      Usuario?        @relation("RestricaoResolvidaPor", fields: [resolvidoPorId], references: [id])
+
+  @@index([estabelecimentoId, clienteId, status])
+  @@map("restricoes_clientes")
+}
+
+// ---------------------------------------------------------------------------
+// INGRESSOS_TIPOS (lotes e categorias de ingresso de cada evento)
+// ---------------------------------------------------------------------------
+model IngressoTipo {
+  id                    Int      @id @default(autoincrement())
+  /// Repetido aqui (além de estar no evento) para toda consulta poder filtrar
+  /// direto por estabelecimento, sem precisar de JOIN.
+  estabelecimentoId     Int      @map("estabelecimento_id")
+  eventoId              Int      @map("evento_id")
+  nome                  String
+  preco                 Decimal  @db.Decimal(12, 2)
+  /// Estoque que ainda pode ser vendido. A venda decrementa este número
+  /// de forma atômica (veja a etapa 6 do roteiro).
+  quantidadeDisponivel  Int      @map("quantidade_disponivel")
+  criadoEm              DateTime @default(now()) @map("criado_em")
+  atualizadoEm          DateTime @updatedAt @map("atualizado_em")
+
+  estabelecimento       Estabelecimento @relation(fields: [estabelecimentoId], references: [id])
+  evento                Evento          @relation(fields: [eventoId], references: [id])
+
+  vendasIngressos       VendaIngresso[]
+
+  @@index([estabelecimentoId, eventoId])
+  @@map("ingressos_tipos")
+}
+
+// ---------------------------------------------------------------------------
+// VENDAS_INGRESSOS (cada linha é um ingresso vendido)
+// ---------------------------------------------------------------------------
+model VendaIngresso {
+  id                Int           @id @default(autoincrement())
+  estabelecimentoId Int           @map("estabelecimento_id")
+  eventoId          Int           @map("evento_id")
+  ingressoTipoId    Int           @map("ingresso_tipo_id")
+  /// Opcional: venda na porta pode ser feita sem cadastrar o cliente.
+  clienteId         Int?          @map("cliente_id")
+  usuarioVendedorId Int           @map("usuario_vendedor_id")
+  /// Código aleatório e impossível de adivinhar (nunca sequencial).
+  codigoQr          String        @unique @map("codigo_qr")
+  valorPago         Decimal       @db.Decimal(12, 2) @map("valor_pago")
+
+  statusVenda       StatusVenda   @default(CONFIRMADA) @map("status_venda")
+  estornadaEm       DateTime?     @map("estornada_em")
+
+  statusCheckin     StatusCheckin @default(PENDENTE) @map("status_checkin")
+  checkinEm         DateTime?     @map("checkin_em")
+  checkinPorId      Int?          @map("checkin_por_id")
+
+  criadoEm          DateTime      @default(now()) @map("criado_em")
+  atualizadoEm      DateTime      @updatedAt @map("atualizado_em")
+
+  estabelecimento   Estabelecimento @relation(fields: [estabelecimentoId], references: [id])
+  evento            Evento          @relation(fields: [eventoId], references: [id])
+  ingressoTipo      IngressoTipo    @relation(fields: [ingressoTipoId], references: [id])
+  cliente           Cliente?        @relation(fields: [clienteId], references: [id])
+  vendedor          Usuario         @relation("VendedorDaVenda", fields: [usuarioVendedorId], references: [id])
+  checkinPor        Usuario?        @relation("ResponsavelPeloCheckin", fields: [checkinPorId], references: [id])
+
+  @@index([estabelecimentoId, eventoId])
+  @@index([estabelecimentoId, clienteId])
+  @@index([estabelecimentoId, criadoEm])
+  @@map("vendas_ingressos")
+}
+
+// ---------------------------------------------------------------------------
+// VENDAS_CONSUMO_API (consumo do bar/PDV externo, recebido pela API)
+// ---------------------------------------------------------------------------
+model VendaConsumoApi {
+  id                  Int       @id @default(autoincrement())
+  estabelecimentoId   Int       @map("estabelecimento_id")
+  /// Opcionais: o cruzamento (etapa 8) tenta preencher; se não conseguir,
+  /// a venda fica "pendente" para o gestor vincular manualmente.
+  eventoId            Int?      @map("evento_id")
+  clienteId           Int?      @map("cliente_id")
+  /// Identificador da venda no sistema de origem. Evita duplicar a mesma venda.
+  idTransacaoExterna  String    @map("id_transacao_externa")
+  valorTotal          Decimal   @db.Decimal(12, 2) @map("valor_total")
+  /// Quando a venda aconteceu no sistema de origem (usado para achar o evento).
+  dataHoraTransacao   DateTime  @map("data_hora_transacao")
+  /// Itens da venda, se o sistema parceiro enviar. Formato livre.
+  itens               Json?
+  /// Cópia do JSON recebido, para auditoria.
+  payloadOriginal     Json      @map("payload_original")
+  criadoEm            DateTime  @default(now()) @map("criado_em")
+
+  estabelecimento     Estabelecimento @relation(fields: [estabelecimentoId], references: [id])
+  evento              Evento?         @relation(fields: [eventoId], references: [id])
+  cliente             Cliente?        @relation(fields: [clienteId], references: [id])
+
+  /// Idempotência: a mesma transação não entra duas vezes.
+  @@unique([estabelecimentoId, idTransacaoExterna])
+  @@index([estabelecimentoId, eventoId])
+  @@index([estabelecimentoId, clienteId])
+  @@index([estabelecimentoId, dataHoraTransacao])
+  @@map("vendas_consumo_api")
+}
+
+// ---------------------------------------------------------------------------
+// RECOMENDACOES_GESTAO (sugestões automáticas para o gestor)
+// ---------------------------------------------------------------------------
+model RecomendacaoGestao {
+  id                Int                @id @default(autoincrement())
+  estabelecimentoId Int                @map("estabelecimento_id")
+  tipoInsight       TipoInsight        @map("tipo_insight")
+  titulo            String
+  descricao         String
+  prioridade        Int                @default(2) // 1 = alta, 2 = média, 3 = baixa
+  /// Números que justificam a sugestão (ex.: médias, quantidades).
+  dadosSuporte      Json?              @map("dados_suporte")
+  status            StatusRecomendacao @default(NOVA)
+  criadoEm          DateTime           @default(now()) @map("criado_em")
+  atualizadoEm      DateTime           @updatedAt @map("atualizado_em")
+
+  estabelecimento   Estabelecimento    @relation(fields: [estabelecimentoId], references: [id])
+
+  @@index([estabelecimentoId, status])
+  @@map("recomendacoes_gestao")
+}
