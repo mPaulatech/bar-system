@@ -2,28 +2,20 @@
 
 API do **Sistema de Gestão e Inteligência de Clientes** para casas de shows, desenvolvida como projeto acadêmico na **Fatec Guaratinguetá**, tendo o bar **Dona Bier** como caso de uso.
 
-O sistema centraliza a venda de ingressos, o histórico de cada cliente e os dados de consumo vindos de outros sistemas (como o do bar), e transforma tudo isso em indicadores (KPIs), segmentação de público e recomendações para a gestão.
-
 > Este README é completado ao longo do desenvolvimento. Onde estiver escrito **(preencher na Etapa N)**, a informação entra quando a etapa correspondente for concluída.
-
----
-
-## O problema que resolvemos
-
-Casas de shows usam vários sistemas isolados (venda online, venda na porta, promoções, restrições de clientes). A equipe precisa consultar cada um separadamente para atender o cliente, e a gestão precisa cruzar relatórios na mão para fechar o resultado da noite. Este sistema reúne esses dados em um só lugar.
 
 ## O que o sistema faz
 
 - Cadastro da casa de shows e dos eventos (multi-tenant: cada casa só enxerga os próprios dados)
 - Criação de lotes e tipos de ingresso
-- Venda de ingressos na portaria (PDV) com QR Code
-- Check-in e controle de acesso pelo QR Code
+- Venda de ingressos na portaria (PDV)
+- Check-in e controle de acesso 
 - API de integração para receber o consumo de sistemas parceiros (bar, PDV)
-- Cruzamento do consumo com o cadastro único do cliente e com o evento
+- Cruzamento do consumo e evento
 - Ficha única do cliente, com histórico de vários eventos
 - Alertas e restrições (pendências, débitos)
 - Segmentação do público (frequentes, ausentes, VIPs, aniversariantes)
-- Dashboard de performance, curva ABC de clientes e recomendações para o gestor
+- Dashboard de performance e recomendações para o gestor
 
 ## Tecnologias
 
@@ -35,7 +27,6 @@ Casas de shows usam vários sistemas isolados (venda online, venda na porta, pro
 | Zod | Validação dos dados recebidos |
 | jsonwebtoken + bcryptjs | Login (JWT) e senhas criptografadas |
 | helmet, cors, express-rate-limit | Segurança da API |
-| qrcode | Geração do QR Code dos ingressos |
 | `node --test` | Testes automatizados |
 
 ## Pré-requisitos
@@ -56,7 +47,7 @@ npm install
 
 # 3. criar o arquivo de configuração a partir do exemplo
 cp .env.example .env
-# abra o .env e preencha os valores (veja a tabela abaixo)
+# abra o .env e preencha os valores 
 
 # 4. criar as tabelas no banco
 npx prisma migrate dev
@@ -145,16 +136,6 @@ Tabelas: `estabelecimentos`, `usuarios`, `eventos`, `clientes`, `restricoes_clie
 
 ## Autenticação
 
-Há duas formas de acesso:
-
-1. **Usuários do sistema (gestor e funcionário):** fazem login e recebem um token JWT, enviado em todas as requisições no cabeçalho:
-   ```
-   Authorization: Bearer <token>
-   ```
-2. **Sistemas parceiros (integração de consumo):** usam uma chave de API enviada no cabeçalho `x-api-key`.
-
-*(Detalhar o fluxo de login com exemplos na Etapa 3.)*
-
 Perfis:
 
 | Perfil | Pode |
@@ -192,18 +173,7 @@ Guia completo para quem integra: [`docs/api-integracao.md`](docs/api-integracao.
 
 ```bash
 npm test
-```
-
-*(Listar o que é coberto: isolamento entre estabelecimentos, estoque, check-in, idempotência da API de consumo, KPIs. Preencher na Etapa 16.)*
+``
 
 ---
 
-## Equipe e contexto
-
-Projeto acadêmico da **Fatec Guaratinguetá**.
-
-| Integrante | Responsabilidade |
-|---|---|
-| *(nome)* | *(back-end / front-end / banco / documentação)* |
-
-O front-end está na pasta [`../frontend`](../frontend) (design criado com o Framer AI).
