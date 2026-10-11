@@ -33,7 +33,39 @@ npm run dev
 
 ## Backend
 
-Ainda não desenvolvido.
+API do sistema, desenvolvida com Node.js, Express, PostgreSQL e Prisma.
+
+**Pré-requisitos**
+
+- Node.js 20 ou mais novo
+- Banco de dados PostgreSQL
+
+**Como rodar**
+
+```bash
+cd backend
+npm install
+cp .env.example .env
+```
+
+O `.env.example` contém a `DATABASE_URL`. Complete o arquivo `.env` com as outras variáveis obrigatórias:
+
+```env
+JWT_SECRET="substitua-por-um-segredo-aleatorio-com-pelo-menos-16-caracteres"
+JWT_EXPIRA_EM="8h"
+PORTA="3000"
+FRONTEND_URL="http://localhost:5173"
+```
+
+Substitua o valor de `JWT_SECRET` por um segredo próprio e não envie o `.env` ao GitHub. Depois, crie e popule o banco e inicie a API:
+
+```bash
+npx prisma migrate dev
+npx prisma db seed
+npm run dev
+```
+
+Com `PORTA="3000"`, a API ficará disponível em `http://localhost:3000`. Para verificar se está funcionando, acesse `http://localhost:3000/v1/saude`. Para executar os testes automatizados, use `npm test` dentro de `backend/`.
 
 ## Integrantes
 

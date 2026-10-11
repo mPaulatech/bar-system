@@ -25,6 +25,7 @@ import {
   Plus,
   Search,
   Settings2,
+  ShoppingCart,
   Ticket,
   TicketCheck,
   UsersRound,
@@ -46,6 +47,8 @@ import {
 } from 'recharts'
 import { useDispatch, useSelector } from 'react-redux'
 import type { AppDispatch, RootState } from './store'
+import Eventos from './pages/Eventos'
+import Pdv from './pages/Pdv'
 import {
   adicionarIngresso,
   finalizarCarregamento,
@@ -150,6 +153,8 @@ function TooltipGrafico({
 
 function App() {
   const dispatch = useDispatch<AppDispatch>()
+  const estaNoPdv = window.location.pathname === '/pdv'
+  const estaEmEventos = window.location.pathname === '/eventos'
   const { ingressos, carregando, filtro, busca } = useSelector(
     (estado: RootState) => estado.ingressos,
   )
@@ -166,6 +171,10 @@ function App() {
     const temporizador = window.setTimeout(() => dispatch(finalizarCarregamento()), 1250)
     return () => window.clearTimeout(temporizador)
   }, [dispatch])
+
+  useEffect(() => {
+    document.title = estaNoPdv ? 'PDV | Backstage' : estaEmEventos ? 'Eventos | Backstage' : 'Ingressos | Backstage'
+  }, [estaNoPdv, estaEmEventos])
 
   useEffect(() => {
     if (!notificacao) return
@@ -240,7 +249,19 @@ function App() {
   }
 
   const navegarPara = (rotulo: string) => {
-    if (rotulo !== 'Ingressos') abrirNotificacao(`${rotulo}: seção indisponível neste protótipo.`)
+    if (rotulo === 'Agenda de shows') {
+      window.location.assign('/eventos')
+      return
+    }
+    if (rotulo === 'PDV') {
+      window.location.assign('/pdv')
+      return
+    }
+    if (rotulo === 'Ingressos') {
+      window.location.assign('/')
+      return
+    }
+    abrirNotificacao(`${rotulo}: seção indisponível neste protótipo.`)
   }
 
   const estatisticas = [
@@ -252,7 +273,7 @@ function App() {
 
   const itensMenu = [
     { grupo: 'GERAL', itens: [{ nome: 'Visão geral', icone: LayoutDashboard }, { nome: 'Clientes', icone: UsersRound }] },
-    { grupo: 'OPERAÇÃO', itens: [{ nome: 'Agenda de shows', icone: CalendarDays }, { nome: 'Bandas', icone: Music2 }, { nome: 'Ingressos', icone: Ticket }, { nome: 'Validação', icone: TicketCheck }, { nome: 'Promoções', icone: ArrowDownUp }] },
+    { grupo: 'OPERAÇÃO', itens: [{ nome: 'Agenda de shows', icone: CalendarDays }, { nome: 'Bandas', icone: Music2 }, { nome: 'Ingressos', icone: Ticket }, { nome: 'PDV', icone: ShoppingCart }, { nome: 'Validação', icone: TicketCheck }, { nome: 'Promoções', icone: ArrowDownUp }] },
     { grupo: 'GESTÃO', itens: [{ nome: 'Financeiro', icone: CreditCard }, { nome: 'Relatórios', icone: Activity }, { nome: 'Configurações', icone: Settings2 }] },
   ]
 
@@ -275,7 +296,7 @@ function App() {
         <nav className="navegacao" aria-label="Navegação principal">
           {itensMenu.map((grupo) => <div className="grupo-menu" key={grupo.grupo}>
             {!menuRecolhido && <span className="titulo-grupo">{grupo.grupo}</span>}
-            {grupo.itens.map(({ nome, icone: Icone }) => <button className={`item-menu ${nome === 'Ingressos' ? 'ativo' : ''}`} key={nome} title={nome} aria-label={nome} aria-current={nome === 'Ingressos' ? 'page' : undefined} onClick={() => navegarPara(nome)}>
+            {grupo.itens.map(({ nome, icone: Icone }) => <button className={`item-menu ${(nome === 'PDV' && estaNoPdv) || (nome === 'Agenda de shows' && estaEmEventos) || (nome === 'Ingressos' && !estaNoPdv && !estaEmEventos) ? 'ativo' : ''}`} key={nome} title={nome} aria-label={nome} aria-current={(nome === 'PDV' && estaNoPdv) || (nome === 'Agenda de shows' && estaEmEventos) || (nome === 'Ingressos' && !estaNoPdv && !estaEmEventos) ? 'page' : undefined} onClick={() => navegarPara(nome)}>
               <Icone size={18} strokeWidth={1.8} />{!menuRecolhido && <span>{nome}</span>}{!menuRecolhido && nome === 'Validação' && <span className="contador-menu">3</span>}
             </button>)}
           </div>)}
@@ -289,11 +310,12 @@ function App() {
 
       <main className="conteudo-principal">
         <header className="cabecalho">
-          <div className="caminho-pagina"><button className="botao-icone alternar-menu" aria-label={menuRecolhido ? 'Expandir menu' : 'Recolher menu'} onClick={() => setMenuRecolhido(!menuRecolhido)}>{menuRecolhido ? <Menu size={19} /> : <ChevronLeft size={19} />}</button><span>Operação</span><ChevronRight size={13} /><strong>Ingressos</strong></div>
+          <div className="caminho-pagina"><button className="botao-icone alternar-menu" aria-label={menuRecolhido ? 'Expandir menu' : 'Recolher menu'} onClick={() => setMenuRecolhido(!menuRecolhido)}>{menuRecolhido ? <Menu size={19} /> : <ChevronLeft size={19} />}</button><span>Operação</span><ChevronRight size={13} /><strong>{estaNoPdv ? 'PDV' : estaEmEventos ? 'Eventos' : 'Ingressos'}</strong></div>
           <div className="acoes-cabecalho"><span className="data-atual"><CalendarDays size={15} /> 10 out, 2026</span><button className="botao-icone notificacoes" aria-label="Notificações" onClick={() => abrirNotificacao('Você está em dia. Nenhuma notificação nova.')}><Bell size={18} /><i /></button><div className="avatar-usuario avatar-cabecalho">MP</div></div>
         </header>
 
         <div className="area-conteudo">
+          {estaNoPdv ? <Pdv /> : estaEmEventos ? <Eventos /> : <>
           <section className="titulo-secao">
             <div><span className="sobretitulo"><span className="ponto-ao-vivo" /> CENTRAL DE VENDAS</span><h1>Ingressos</h1><p>Acompanhe vendas, lotes e check-ins dos seus eventos.</p></div>
             <div className="acoes-titulo"><button className="botao-secundario" onClick={exportarCsv} disabled={exportando}>{exportando ? <span className="spinner" /> : <ArrowDownToLine size={16} />}Exportar</button><button className="botao-primario" onClick={() => setModalAberto(true)}><Plus size={17} /> Novo lote</button></div>
@@ -352,6 +374,7 @@ function App() {
           </section>
 
           <footer className="rodape-pagina"><span>BACKSTAGE <i>·</i> CENTRAL DE OPERAÇÕES</span><span><Clock3 size={13} /> Sincronizado agora</span></footer>
+          </>}
         </div>
       </main>
 
