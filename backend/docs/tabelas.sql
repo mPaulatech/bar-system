@@ -132,7 +132,7 @@ CREATE TABLE vendas_ingressos (
     ingresso_tipo_id    INTEGER        NOT NULL REFERENCES ingressos_tipos (id),
     cliente_id          INTEGER        REFERENCES clientes (id),   -- opcional
     usuario_vendedor_id INTEGER        NOT NULL REFERENCES usuarios (id),
-    codigo_qr           TEXT           NOT NULL UNIQUE,
+    codigo_ingresso     TEXT           NOT NULL UNIQUE,   -- código curto digitado no check-in
     valor_pago          NUMERIC(12,2)  NOT NULL,
     status_venda        status_venda   NOT NULL DEFAULT 'CONFIRMADA',
     estornada_em        TIMESTAMP(3),

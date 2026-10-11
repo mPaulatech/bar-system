@@ -256,8 +256,9 @@ model VendaIngresso {
   /// Opcional: venda na porta pode ser feita sem cadastrar o cliente.
   clienteId         Int?          @map("cliente_id")
   usuarioVendedorId Int           @map("usuario_vendedor_id")
-  /// Código aleatório e impossível de adivinhar (nunca sequencial).
-  codigoQr          String        @unique @map("codigo_qr")
+  /// Código curto do ingresso (8 caracteres), aleatório e único. A portaria digita
+  /// esse código no check-in. Nunca sequencial.
+  codigoIngresso    String        @unique @map("codigo_ingresso")
   valorPago         Decimal       @db.Decimal(12, 2) @map("valor_pago")
 
   statusVenda       StatusVenda   @default(CONFIRMADA) @map("status_venda")

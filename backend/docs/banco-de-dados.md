@@ -88,7 +88,7 @@ erDiagram
         int ingresso_tipo_id FK
         int cliente_id FK "opcional"
         int usuario_vendedor_id FK
-        string codigo_qr UK
+        string codigo_ingresso UK
         decimal valor_pago
         enum status_venda "CONFIRMADA | ESTORNADA"
         datetime estornada_em "opcional"
@@ -165,6 +165,7 @@ Todas as tabelas de negócio também ligam ao `ESTABELECIMENTOS` pela coluna `es
 ### Decisões que vale você entender
 - **Dinheiro em `Decimal(12,2)`**, nunca `Float`. Números decimais comuns erram na soma (0,1 + 0,2 não dá exatamente 0,3), e dinheiro não pode errar.
 - **Enums** (listas fechadas de valores) para perfil, status e tipos. O banco recusa um valor inventado, o que evita bugs.
+- **Sem QR Code:** cada ingresso tem um `codigo_ingresso` curto e aleatório (8 caracteres). A portaria digita esse código no check-in, ou busca o cliente por CPF ou nome.
 - **Índices** começando por `estabelecimento_id`: quase toda consulta do sistema filtra por ele, então o banco já fica rápido onde mais importa.
 - **Nomes em português no código, snake_case no banco**: o `@map` e o `@@map` fazem o Prisma traduzir `estabelecimentoId` (código) para `estabelecimento_id` (coluna), como no seu diagrama.
 
@@ -399,7 +400,7 @@ CREATE TABLE vendas_ingressos (
     ingresso_tipo_id    INTEGER        NOT NULL REFERENCES ingressos_tipos (id),
     cliente_id          INTEGER        REFERENCES clientes (id),   -- opcional
     usuario_vendedor_id INTEGER        NOT NULL REFERENCES usuarios (id),
-    codigo_qr           TEXT           NOT NULL UNIQUE,
+    codigo_ingresso     TEXT           NOT NULL UNIQUE,   -- código curto digitado no check-in
     valor_pago          NUMERIC(12,2)  NOT NULL,
     status_venda        status_venda   NOT NULL DEFAULT 'CONFIRMADA',
     estornada_em        TIMESTAMP(3),
