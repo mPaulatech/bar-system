@@ -1,10 +1,10 @@
 # bar-system
-Projeto acadêmico: sistema de centralização e gestão do bar Dona Bier (Fatec Guaratinguetá).
+Projeto acadêmico: sistema de centralização e gestão de bares (Fatec Guaratinguetá).
 
 ## Estrutura
 
 ```
-dona-bier/
+bar-system/
 ├── frontend/
 └── backend/
 ```
