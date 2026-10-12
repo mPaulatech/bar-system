@@ -187,21 +187,21 @@ async function executarSeed() {
     eventoId: eventoAtivo.id,
     nome: 'Pista',
     preco: '45.00',
-    quantidadeDisponivel: 497,
+    quantidadeDisponivel: 498,
   });
   const ingressoAtivoVip = await obterOuCriarIngressoTipo({
     estabelecimentoId: estabelecimento.id,
     eventoId: eventoAtivo.id,
     nome: 'Área VIP',
     preco: '90.00',
-    quantidadeDisponivel: 198,
+    quantidadeDisponivel: 199,
   });
   const ingressoEncerrado = await obterOuCriarIngressoTipo({
     estabelecimentoId: estabelecimento.id,
     eventoId: eventoEncerrado.id,
     nome: 'Pista',
     preco: '35.00',
-    quantidadeDisponivel: 0,
+    quantidadeDisponivel: 1,
   });
 
   await prisma.vendaIngresso.upsert({

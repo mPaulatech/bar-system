@@ -77,7 +77,7 @@ erDiagram
         int evento_id FK
         string nome
         decimal preco
-        int quantidade_disponivel
+        int quantidade_disponivel "capacidade total; o restante considera vendas confirmadas"
         datetime criado_em
         datetime atualizado_em
     }

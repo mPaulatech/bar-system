@@ -143,6 +143,18 @@ Perfis:
 | `GESTOR` | Tudo: configurações, eventos, lotes, restrições, KPIs, recomendações, funcionários |
 | `FUNCIONARIO` | Vender ingresso, fazer check-in e consultar clientes e eventos |
 
+O cadastro inicial cria o estabelecimento e seu primeiro usuário `GESTOR` na mesma
+transação. Senhas são armazenadas somente como hash bcrypt. No login, a API
+emite um JWT assinado com `JWT_SECRET`, contendo `usuarioId`, `estabelecimentoId`
+e `perfil`. O middleware de autenticação valida esse token e coloca esses dados
+em `req.usuario`.
+
+O `estabelecimentoId` não é aceito no corpo das requisições protegidas: ele vem
+do token e todas as consultas e alterações de funcionários filtram por esse
+valor. Assim, mesmo que um usuário tente informar o ID de outro estabelecimento,
+não consegue acessar seus dados. O middleware `exigirPerfil('GESTOR')` retorna
+403 para funcionários.
+
 ## Rotas da API
 
 Todas as rotas começam com `/v1`. A tabela abaixo registra o contrato de cada
@@ -152,8 +164,29 @@ As rotas marcadas como **planejada** ainda não estão montadas no Express.
 | Módulo | Método | URL | Perfil | Corpo esperado | Exemplo de resposta | Status |
 |---|---|---|---|---|---|---|
 | Saúde | `GET` | `/v1/saude` | Público | Nenhum corpo | `200 OK`<br>`{ "status": "ok" }` | Implementada |
-| Autenticação | `POST` | `/v1/autenticacao/registro-estabelecimento` | Público | `{ "nomeFantasia": "Dona Bier", "razaoSocial": "Dona Bier Eventos Ltda.", "cnpj": "12.345.678/0001-90", "emailContato": "contato@donabier.example", "nomeGestor": "Marina Gestora", "emailGestor": "gestor@donabier.example", "senhaGestor": "Gestor@123456" }` | `201 Created`<br>`{ "estabelecimento": { "id": 1, "nomeFantasia": "Dona Bier" }, "gestor": { "id": 1, "email": "gestor@donabier.example" } }` | Planejada |
-| Autenticação | `POST` | `/v1/autenticacao/login` | Público | `{ "email": "gestor@donabier.example", "senha": "Gestor@123456" }` | `200 OK`<br>`{ "token": "<JWT>", "usuario": { "id": 1, "nome": "Marina Gestora", "perfil": "GESTOR" } }` | Planejada |
+| Autenticação | `POST` | `/v1/autenticacao/registro-estabelecimento` | Público | `{ "nomeFantasia": "Dona Bier", "razaoSocial": "Dona Bier Eventos Ltda.", "cnpj": "12.345.678/0001-90", "emailContato": "contato@donabier.example", "nomeGestor": "Marina Gestora", "emailGestor": "gestor@donabier.example", "senhaGestor": "Gestor@123456" }` | `201 Created`<br>`{ "estabelecimento": { "id": 1, "nomeFantasia": "Dona Bier" }, "gestor": { "id": 1, "email": "gestor@donabier.example" } }` | Implementada |
+| Autenticação | `POST` | `/v1/autenticacao/login` | Público | `{ "email": "gestor@donabier.example", "senha": "Gestor@123456" }` | `200 OK`<br>`{ "token": "<JWT>", "usuario": { "id": 1, "nome": "Marina Gestora", "perfil": "GESTOR" } }` | Implementada |
+| Usuários | `POST` | `/v1/usuarios/funcionarios` | GESTOR | `{ "nome": "Carlos", "email": "carlos@example.com", "senha": "Funcionario@123" }` | `201 Created`<br>Funcionário sem `senhaHash` | Implementada |
+| Usuários | `GET` | `/v1/usuarios/funcionarios` | GESTOR | Nenhum corpo | `200 OK`<br>Lista do estabelecimento do token | Implementada |
+| Usuários | `PATCH` | `/v1/usuarios/funcionarios/:id/ativo` | GESTOR | `{ "ativo": false }` | `200 OK`<br>Funcionário atualizado | Implementada |
+| Eventos | `POST` | `/v1/eventos` | GESTOR | `{ "nome": "Noite do Rock", "generoMusical": "Rock", "atracoes": "Banda X", "dataHora": "2026-11-20T22:00:00-03:00", "status": "ATIVO" }` | `201 Created`<br>Evento criado | Implementada |
+| Eventos | `GET` | `/v1/eventos` | GESTOR ou FUNCIONARIO | Consulta: `pagina`, `limite` (máx. 100), `status`, `generoMusical`, `dataInicio`, `dataFim` | `200 OK`<br>`{ "dados": [], "pagina": 1, "limite": 20, "total": 0, "totalPaginas": 0 }` | Implementada |
+| Eventos | `GET` | `/v1/eventos/ativos` | GESTOR ou FUNCIONARIO | Nenhum | `200 OK`<br>Eventos com status `ATIVO` | Implementada |
+| Eventos | `GET` | `/v1/eventos/:id` | GESTOR ou FUNCIONARIO | Nenhum | `200 OK`<br>Evento do estabelecimento | Implementada |
+| Eventos | `PATCH` | `/v1/eventos/:id` | GESTOR | Campos do evento | `200 OK`<br>Evento atualizado | Implementada |
+| Eventos | `DELETE` | `/v1/eventos/:id` | GESTOR | Nenhum | `200 OK`<br>Sem vendas exclui; com vendas muda para `ENCERRADO` | Implementada |
+| Tipos de ingresso | `POST` | `/v1/eventos/:eventoId/ingressos-tipos` | GESTOR | `{ "nome": "VIP", "preco": 90, "quantidadeDisponivel": 100 }` | `201 Created`<br>Tipo com `quantidadeRestante` | Implementada |
+| Tipos de ingresso | `GET` | `/v1/eventos/:eventoId/ingressos-tipos` | GESTOR ou FUNCIONARIO | Nenhum | `200 OK`<br>Tipos do evento com quantidade restante | Implementada |
+| Tipos de ingresso | `GET` | `/v1/eventos/:eventoId/ingressos-tipos/:id` | GESTOR ou FUNCIONARIO | Nenhum | `200 OK`<br>Tipo com quantidade restante | Implementada |
+| Tipos de ingresso | `PATCH` | `/v1/eventos/:eventoId/ingressos-tipos/:id` | GESTOR | Campos do tipo | `200 OK`<br>Tipo atualizado | Implementada |
+| Tipos de ingresso | `DELETE` | `/v1/eventos/:eventoId/ingressos-tipos/:id` | GESTOR | Nenhum | `200 OK`<br>Sem vendas confirmadas exclui | Implementada |
+| Estabelecimento | `GET` | `/v1/estabelecimento` | GESTOR ou FUNCIONARIO | Nenhum | `200 OK`<br>Dados públicos do estabelecimento | Implementada |
+| Estabelecimento | `PATCH` | `/v1/estabelecimento` | GESTOR | `{ "nomeFantasia": "Novo nome", "razaoSocial": "Nova razão social" }` | `200 OK`<br>Estabelecimento atualizado | Implementada |
+| Estabelecimento | `POST` | `/v1/estabelecimento/api-key` | GESTOR | Nenhum | `201 Created`<br>API Key em texto puro, exibida somente nesta resposta | Implementada |
+| Vendas de ingressos | `POST` | `/v1/vendas-ingressos` | GESTOR ou FUNCIONARIO | `{ "eventoId": 1, "ingressoTipoId": 1, "cpf": "111.111.111-11", "nomeCliente": "Cliente" }` ou `clienteId` | `201 Created`<br>Venda com `codigoIngresso` de 8 caracteres | Implementada |
+| Vendas de ingressos | `GET` | `/v1/vendas-ingressos/:id` | GESTOR ou FUNCIONARIO | Nenhum | `200 OK`<br>Evento, tipo, valor, cliente, código e status | Implementada |
+| Vendas de ingressos | `GET` | `/v1/vendas-ingressos` | GESTOR ou FUNCIONARIO | Consulta: `eventoId`, `vendedorId`, `dataInicio`, `dataFim`, `pagina`, `limite` | `200 OK`<br>Lista paginada de vendas | Implementada |
+| Vendas de ingressos | `POST` | `/v1/vendas-ingressos/:id/estorno` | GESTOR | Nenhum | `200 OK`<br>Venda estornada e estoque devolvido | Implementada |
 | Integração de consumo | `POST` | `/v1/integrations/consumption` | Sistema parceiro com `x-api-key` | Cabeçalho `x-api-key: <chave-da-api>` e `{ "idTransacaoExterna": "PDV-2026-0001", "valorTotal": 72.5, "dataHoraTransacao": "2026-11-20T22:30:00-03:00", "cpfCliente": "111.111.111-11", "itens": [{ "nome": "Chopp", "quantidade": 2 }] }` | `201 Created`<br>`{ "id": 1, "idTransacaoExterna": "PDV-2026-0001", "status": "recebida" }` | Planejada |
 
 ## Integração com sistemas externos (API de consumo)
@@ -178,4 +211,3 @@ npm test
 ``
 
 ---
-
