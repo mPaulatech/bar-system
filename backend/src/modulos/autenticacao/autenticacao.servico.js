@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { erroHttp } from '../../utilitarios/erro-http.js';
-import { somenteDigitos } from './autenticacao.esquemas.js';
+import { normalizarCnpj, somenteDigitos } from './autenticacao.esquemas.js';
 
 function validarDigitos(documento, tamanho) {
   return somenteDigitos(documento).length === tamanho;
@@ -16,7 +16,7 @@ export async function registrarEstabelecimento(prisma, dados) {
     throw erroHttp(400, 'CNPJ ou CPF inválido.');
   }
 
-  const cnpjNormalizado = somenteDigitos(dados.cnpj);
+  const cnpjNormalizado = normalizarCnpj(dados.cnpj);
   const cpfNormalizado = dados.cpfGestor ? somenteDigitos(dados.cpfGestor) : undefined;
   const senhaHash = await bcrypt.hash(dados.senhaGestor, 12);
 

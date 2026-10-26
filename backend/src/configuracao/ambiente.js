@@ -6,12 +6,14 @@ const esquemaAmbiente = z.object({
   JWT_EXPIRA_EM: z.string().regex(/^\d+(s|m|h|d)$/, 'use um período como 15m, 1h ou 1d'),
   PORTA: z.coerce.number().int().min(1).max(65535),
   FRONTEND_URL: z.string().url('deve ser uma URL válida'),
+  LOGIN_LIMITE_TENTATIVAS: z.coerce.number().int().positive().default(10),
+  LOGIN_JANELA_MINUTOS: z.coerce.number().int().positive().default(15),
 });
 
 /**
  * Valida as variáveis de ambiente e devolve a configuração da aplicação.
  * @param {NodeJS.ProcessEnv} variaveis Variáveis disponíveis no processo.
- * @returns {{databaseUrl: string, jwtSecret: string, jwtExpiraEm: string, porta: number, frontendUrl: string}} Configuração validada.
+ * @returns {{databaseUrl: string, jwtSecret: string, jwtExpiraEm: string, porta: number, frontendUrl: string, loginLimiteTentativas: number, loginJanelaMinutos: number}} Configuração validada.
  * @throws {Error} Quando alguma variável estiver ausente ou inválida.
  */
 export function lerConfiguracao(variaveis = process.env) {
@@ -30,5 +32,7 @@ export function lerConfiguracao(variaveis = process.env) {
     jwtExpiraEm: resultado.data.JWT_EXPIRA_EM,
     porta: resultado.data.PORTA,
     frontendUrl: resultado.data.FRONTEND_URL,
+    loginLimiteTentativas: resultado.data.LOGIN_LIMITE_TENTATIVAS,
+    loginJanelaMinutos: resultado.data.LOGIN_JANELA_MINUTOS,
   };
 }

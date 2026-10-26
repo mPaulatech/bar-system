@@ -1,10 +1,12 @@
 import { randomInt } from 'node:crypto';
+import { Prisma } from '@prisma/client';
 import { erroHttp } from '../../utilitarios/erro-http.js';
 
 const ALFABETO_CODIGO = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const selecaoVenda = {
   id: true,
   valorPago: true,
+  formaPagamento: true,
   codigoIngresso: true,
   statusVenda: true,
   statusCheckin: true,
@@ -84,27 +86,43 @@ export async function criarVendaIngresso(prisma, estabelecimentoId, usuarioVende
         });
         if (!tipo) throw erroHttp(404, 'Tipo de ingresso não encontrado.');
 
-        // O update condicional é atômico no banco: em concorrência, só uma venda
-        // consegue transformar o último saldo positivo em zero.
+        // A condição e o decremento acontecem juntos no banco, evitando venda
+        // parcial ou estoque negativo quando várias vendas chegam ao mesmo tempo.
         const estoque = await transacao.ingressoTipo.updateMany({
           where: {
             id: tipo.id,
             estabelecimentoId,
-            quantidadeDisponivel: { gt: 0 },
+            quantidadeDisponivel: { gte: dados.quantidade },
           },
-          data: { quantidadeDisponivel: { decrement: 1 } },
+          data: { quantidadeDisponivel: { decrement: dados.quantidade } },
         });
-        if (estoque.count !== 1) throw erroHttp(409, 'Ingressos esgotados');
+        if (estoque.count !== 1) {
+          const saldo = await transacao.ingressoTipo.findFirst({
+            where: { id: tipo.id, estabelecimentoId },
+            select: { quantidadeDisponivel: true },
+          });
+          throw erroHttp(409, `Ingressos insuficientes. Restam ${saldo?.quantidadeDisponivel ?? 0} ingresso(s).`);
+        }
 
         const cliente = await obterCliente(transacao, estabelecimentoId, dados);
-        return criarComCodigoDisponivel(transacao, {
-          estabelecimentoId,
-          eventoId: evento.id,
-          ingressoTipoId: tipo.id,
-          clienteId: cliente?.id,
-          usuarioVendedorId,
-          valorPago: tipo.preco,
-        });
+        const vendas = [];
+        for (let indice = 0; indice < dados.quantidade; indice += 1) {
+          vendas.push(await criarComCodigoDisponivel(transacao, {
+            estabelecimentoId,
+            eventoId: evento.id,
+            ingressoTipoId: tipo.id,
+            clienteId: cliente?.id,
+            usuarioVendedorId,
+            valorPago: tipo.preco,
+            formaPagamento: dados.formaPagamento,
+          }));
+        }
+        return {
+          vendas,
+          quantidade: dados.quantidade,
+          valorTotal: new Prisma.Decimal(tipo.preco).mul(dados.quantidade),
+          formaPagamento: dados.formaPagamento,
+        };
       });
     } catch (erro) {
       if (erro?.code === 'P2002' && tentativa < 4) continue;
@@ -179,10 +197,14 @@ export async function estornarVendaIngresso(prisma, estabelecimentoId, id) {
       throw erroHttp(409, 'Não é possível estornar ingresso já utilizado.');
     }
 
-    await transacao.ingressoTipo.update({
-      where: { id: venda.ingressoTipoId },
+    const estoque = await transacao.ingressoTipo.updateMany({
+      where: { id: venda.ingressoTipoId, estabelecimentoId },
       data: { quantidadeDisponivel: { increment: 1 } },
     });
+    if (estoque.count !== 1) {
+      throw erroHttp(409, 'Não foi possível devolver o ingresso ao estoque.');
+    }
+
     return transacao.vendaIngresso.findFirst({
       where: { id: venda.id, estabelecimentoId },
       select: selecaoVenda,

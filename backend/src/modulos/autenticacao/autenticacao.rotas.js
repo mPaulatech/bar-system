@@ -8,10 +8,11 @@ export function criarRotasAutenticacao(dependencias) {
   const router = express.Router();
   const controlador = criarControladorAutenticacao(dependencias);
   const limiteLogin = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    limit: 5,
+    windowMs: dependencias.configuracao.loginJanelaMinutos * 60 * 1000,
+    limit: dependencias.configuracao.loginLimiteTentativas,
     standardHeaders: 'draft-8',
     legacyHeaders: false,
+    skipSuccessfulRequests: true,
     message: { status: 'falha', mensagem: 'Muitas tentativas de login. Tente novamente mais tarde.' },
   });
 

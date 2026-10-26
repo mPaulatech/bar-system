@@ -39,6 +39,7 @@ export const esquemaListarEventos = z.object({
   consulta: z.object({
     pagina: z.coerce.number().int().positive().default(1),
     limite: z.coerce.number().int().positive().max(100).default(20),
+    nome: z.string().trim().min(1).optional(),
     status: status.optional(),
     generoMusical: z.string().trim().min(1).optional(),
     dataInicio: z.coerce.date().optional(),

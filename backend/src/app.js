@@ -23,11 +23,20 @@ export function criarAplicacao(configuracao, dependencias = {}) {
   const configuracaoCompleta = {
     jwtSecret: configuracao.jwtSecret ?? process.env.JWT_SECRET ?? 'chave-local-desenvolvimento-32',
     jwtExpiraEm: configuracao.jwtExpiraEm ?? process.env.JWT_EXPIRA_EM ?? '8h',
+    loginLimiteTentativas: configuracao.loginLimiteTentativas ?? 10,
+    loginJanelaMinutos: configuracao.loginJanelaMinutos ?? 15,
   };
 
   aplicacao.use(helmet());
   aplicacao.use(cors({ origin: configuracao.frontendUrl }));
   aplicacao.use(express.json({ limit: '1mb' }));
+  aplicacao.get('/v1/saude', (req, res) => {
+    res.json({ status: 'ok' });
+  });
+
+  aplicacao.use('/v1/autenticacao', criarRotasAutenticacao({ prisma, configuracao: configuracaoCompleta }));
+  // O limitador geral fica depois das rotas públicas para nunca contar saúde,
+  // registro ou login; o login possui um limitador próprio por IP.
   aplicacao.use(rateLimit({
     windowMs: 15 * 60 * 1000,
     limit: 100,
@@ -38,12 +47,6 @@ export function criarAplicacao(configuracao, dependencias = {}) {
       mensagem: 'Limite de requisições excedido. Tente novamente mais tarde.',
     },
   }));
-
-  aplicacao.get('/v1/saude', (req, res) => {
-    res.json({ status: 'ok' });
-  });
-
-  aplicacao.use('/v1/autenticacao', criarRotasAutenticacao({ prisma, configuracao: configuracaoCompleta }));
   aplicacao.use(autenticacao(configuracaoCompleta));
   aplicacao.use('/v1/usuarios', criarRotasUsuarios({ prisma }));
   aplicacao.use('/v1/eventos', criarRotasEventos({ prisma }));

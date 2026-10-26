@@ -119,6 +119,28 @@ test('registro, login e rota protegida funcionam', async () => {
   assert.deepEqual(await funcionarios.json(), []);
 });
 
+test('CNPJ formatado e sem pontuação são considerados duplicados', async () => {
+  const prisma = new PrismaFake();
+  const aplicacao = criarAplicacao(configuracao, { prisma });
+
+  const primeiro = await requisitar(aplicacao, '/v1/autenticacao/registro-estabelecimento', json({
+    method: 'POST',
+    body: registro('Um'),
+  }));
+  assert.equal(primeiro.status, 201);
+
+  const segundo = await requisitar(aplicacao, '/v1/autenticacao/registro-estabelecimento', json({
+    method: 'POST',
+    body: {
+      ...registro('Dois'),
+      cnpj: '12345678000190',
+    },
+  }));
+  assert.equal(segundo.status, 409);
+  assert.equal(prisma.estabelecimentos.length, 1);
+  assert.equal(prisma.usuarios.length, 1);
+});
+
 test('funcionário recebe 403 na rota exclusiva de gestor', async () => {
   const prisma = new PrismaFake();
   const aplicacao = criarAplicacao(configuracao, { prisma });
@@ -167,4 +189,50 @@ test('token de um estabelecimento não acessa funcionários de outro', async () 
   assert.equal(dados.length, 1);
   assert.equal(dados[0].email, 'somenteum@example.com');
   assert.equal(dados[0].estabelecimentoId, undefined);
+});
+
+test('limitador de login ignora saúde, conta falhas e não conta sucessos', async () => {
+  const prisma = new PrismaFake();
+  const aplicacao = criarAplicacao({
+    ...configuracao,
+    loginLimiteTentativas: 2,
+    loginJanelaMinutos: 15,
+  }, { prisma });
+
+  await requisitar(aplicacao, '/v1/autenticacao/registro-estabelecimento', json({
+    method: 'POST', body: registro('Um'),
+  }));
+
+  const saude = await requisitar(aplicacao, '/v1/saude');
+  assert.equal(saude.status, 200);
+
+  for (let tentativa = 0; tentativa < 2; tentativa += 1) {
+    const loginFalho = await requisitar(aplicacao, '/v1/autenticacao/login', json({
+      method: 'POST',
+      body: { email: 'gestorum@example.com', senha: 'senha-incorreta' },
+    }));
+    assert.equal(loginFalho.status, 401);
+  }
+
+  const loginBloqueado = await requisitar(aplicacao, '/v1/autenticacao/login', json({
+    method: 'POST',
+    body: { email: 'gestorum@example.com', senha: 'senha-incorreta' },
+  }));
+  assert.equal(loginBloqueado.status, 429);
+
+  const outraAplicacao = criarAplicacao({
+    ...configuracao,
+    loginLimiteTentativas: 1,
+    loginJanelaMinutos: 15,
+  }, { prisma });
+  const loginSucesso = await requisitar(outraAplicacao, '/v1/autenticacao/login', json({
+    method: 'POST',
+    body: { email: 'gestorum@example.com', senha: 'Gestor@123456' },
+  }));
+  assert.equal(loginSucesso.status, 200);
+  const segundoLoginSucesso = await requisitar(outraAplicacao, '/v1/autenticacao/login', json({
+    method: 'POST',
+    body: { email: 'gestorum@example.com', senha: 'Gestor@123456' },
+  }));
+  assert.equal(segundoLoginSucesso.status, 200);
 });

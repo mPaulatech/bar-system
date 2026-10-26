@@ -1,61 +1,8 @@
 export const ingressosMock = [
-  {
-    id: 'black-signal-pista',
-    evento: 'BLACK SIGNAL',
-    nome: 'Pista',
-    lote: '2º lote',
-    valor: 80,
-    disponiveis: 64,
-    cor: 'coral',
-  },
-  {
-    id: 'black-signal-camarote',
-    evento: 'BLACK SIGNAL',
-    nome: 'Camarote',
-    lote: 'Lote único',
-    valor: 150,
-    disponiveis: 18,
-    cor: 'ouro',
-  },
-  {
-    id: 'black-signal-meia',
-    evento: 'BLACK SIGNAL',
-    nome: 'Meia-entrada',
-    lote: '2º lote',
-    valor: 40,
-    disponiveis: 32,
-    cor: 'menta',
-  },
-  {
-    id: 'noite-grunge-pista',
-    evento: 'NOITE DO GRUNGE',
-    nome: 'Pista',
-    lote: '1º lote',
-    valor: 60,
-    disponiveis: 87,
-    cor: 'coral',
-  },
-  {
-    id: 'noite-grunge-meia',
-    evento: 'NOITE DO GRUNGE',
-    nome: 'Meia-entrada',
-    lote: '1º lote',
-    valor: 30,
-    disponiveis: 41,
-    cor: 'menta',
-  },
-  {
-    id: 'festival-amplifica-pista',
-    evento: 'FESTIVAL AMPLIFICA',
-    nome: 'Pista',
-    lote: 'Lote único',
-    valor: 120,
-    disponiveis: 0,
-    cor: 'coral',
-  },
+  { id: 1, eventoId: 1, nome: 'Pista', preco: '80.00', quantidadeDisponivel: 350, quantidadeRestante: 64, esgotado: false },
+  { id: 2, eventoId: 1, nome: 'Camarote', preco: '150.00', quantidadeDisponivel: 150, quantidadeRestante: 18, esgotado: false },
+  { id: 3, eventoId: 1, nome: 'Meia-entrada', preco: '40.00', quantidadeDisponivel: 100, quantidadeRestante: 32, esgotado: false },
+  { id: 4, eventoId: 2, nome: 'Pista', preco: '60.00', quantidadeDisponivel: 250, quantidadeRestante: 87, esgotado: false },
+  { id: 5, eventoId: 2, nome: 'Meia-entrada', preco: '30.00', quantidadeDisponivel: 100, quantidadeRestante: 41, esgotado: false },
+  { id: 6, eventoId: 3, nome: 'Pista', preco: '120.00', quantidadeDisponivel: 420, quantidadeRestante: 0, esgotado: true },
 ]
-
-// Substitua esta função pela chamada à API quando o endpoint estiver disponível.
-export function buscarIngressosDisponiveis() {
-  return Promise.resolve(ingressosMock)
-}

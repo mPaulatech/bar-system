@@ -3,16 +3,23 @@ import { z } from 'zod';
 const cpf = z.string().trim().transform((valor) => valor.replace(/\D/g, ''))
   .refine((valor) => /^\d{11}$/.test(valor), 'CPF deve conter 11 dígitos.');
 
+const formaPagamento = z.enum(['DINHEIRO', 'PIX', 'CARTAO_DEBITO', 'CARTAO_CREDITO']);
+
 export const esquemaCriarVendaIngresso = z.object({
   corpo: z.object({
     eventoId: z.coerce.number().int().positive(),
     ingressoTipoId: z.coerce.number().int().positive(),
+    quantidade: z.coerce.number().int().min(1).max(20),
+    formaPagamento,
     clienteId: z.coerce.number().int().positive().optional(),
     cpf: cpf.optional(),
     nomeCliente: z.string().trim().min(1).optional(),
   }).strict().refine(
-    (dados) => !(dados.clienteId && dados.cpf),
-    'Informe clienteId ou CPF, não os dois.',
+    (dados) => !(dados.clienteId && (dados.cpf || dados.nomeCliente)),
+    'Informe clienteId ou CPF com nomeCliente, não os dois.',
+  ).refine(
+    (dados) => !dados.cpf || Boolean(dados.nomeCliente),
+    'Informe nomeCliente junto com o CPF.',
   ),
   parametros: z.object({}),
   consulta: z.object({}),

@@ -11,10 +11,24 @@ const camposEvento = {
   status: true,
   criadoEm: true,
   atualizadoEm: true,
+  ingressosTipos: { select: { quantidadeDisponivel: true } },
 };
+
+function comEsgotado(evento) {
+  const { ingressosTipos, ...dados } = evento;
+  const lotes = ingressosTipos ?? [];
+  return {
+    ...dados,
+    esgotado: lotes.length > 0
+      && lotes.every((tipo) => tipo.quantidadeDisponivel === 0),
+  };
+}
 
 function filtroBase(estabelecimentoId, filtros = {}) {
   const where = { estabelecimentoId };
+  if (filtros.nome) {
+    where.nome = { contains: filtros.nome, mode: 'insensitive' };
+  }
   if (filtros.status) where.status = filtros.status;
   if (filtros.generoMusical) {
     where.generoMusical = { contains: filtros.generoMusical, mode: 'insensitive' };
@@ -49,7 +63,7 @@ export async function listarEventos(prisma, estabelecimentoId, filtros) {
       take: limite,
     }),
   ]);
-  return { dados, pagina, limite, total, totalPaginas: Math.ceil(total / limite) };
+  return { dados: dados.map(comEsgotado), pagina, limite, total, totalPaginas: Math.ceil(total / limite) };
 }
 
 export async function listarEventosAtivos(prisma, estabelecimentoId) {
@@ -61,7 +75,7 @@ export async function listarEventosAtivos(prisma, estabelecimentoId) {
   const agora = Date.now();
   return eventos.filter((evento) => (
     new Date(evento.dataHora).getTime() + evento.duracaoHoras * 60 * 60 * 1000 >= agora
-  ));
+  )).map(comEsgotado);
 }
 
 export async function obterEvento(prisma, estabelecimentoId, id) {
@@ -70,7 +84,7 @@ export async function obterEvento(prisma, estabelecimentoId, id) {
     select: camposEvento,
   });
   if (!evento) throw erroHttp(404, 'Evento não encontrado.');
-  return evento;
+  return comEsgotado(evento);
 }
 
 export async function atualizarEvento(prisma, estabelecimentoId, id, dados) {
@@ -88,11 +102,7 @@ export async function excluirEvento(prisma, estabelecimentoId, id) {
     where: { estabelecimentoId, eventoId: id },
   });
   if (vendas > 0) {
-    return prisma.evento.update({
-      where: { id },
-      data: { status: 'ENCERRADO' },
-      select: camposEvento,
-    });
+    throw erroHttp(409, 'O evento possui vendas registradas e não pode ser excluído.');
   }
   await prisma.evento.delete({ where: { id } });
   return { id, excluido: true };

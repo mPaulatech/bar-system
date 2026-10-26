@@ -46,7 +46,7 @@ async function executarSeed() {
   console.log('Iniciando seed idempotente: registros existentes serão atualizados.');
 
   const estabelecimento = await prisma.estabelecimento.upsert({
-    where: { cnpj: '12.345.678/0001-90' },
+    where: { cnpj: '12345678000190' },
     update: {
       nomeFantasia: 'Dona Bier',
       razaoSocial: 'Dona Bier Eventos Ltda.',
@@ -55,7 +55,7 @@ async function executarSeed() {
     create: {
       nomeFantasia: 'Dona Bier',
       razaoSocial: 'Dona Bier Eventos Ltda.',
-      cnpj: '12.345.678/0001-90',
+      cnpj: '12345678000190',
       emailContato: 'contato@donabier.example',
     },
   });
@@ -187,21 +187,21 @@ async function executarSeed() {
     eventoId: eventoAtivo.id,
     nome: 'Pista',
     preco: '45.00',
-    quantidadeDisponivel: 498,
+    quantidadeDisponivel: 497,
   });
   const ingressoAtivoVip = await obterOuCriarIngressoTipo({
     estabelecimentoId: estabelecimento.id,
     eventoId: eventoAtivo.id,
     nome: 'Área VIP',
     preco: '90.00',
-    quantidadeDisponivel: 199,
+    quantidadeDisponivel: 198,
   });
   const ingressoEncerrado = await obterOuCriarIngressoTipo({
     estabelecimentoId: estabelecimento.id,
     eventoId: eventoEncerrado.id,
     nome: 'Pista',
     preco: '35.00',
-    quantidadeDisponivel: 1,
+    quantidadeDisponivel: 0,
   });
 
   await prisma.vendaIngresso.upsert({
@@ -212,6 +212,7 @@ async function executarSeed() {
       clienteId: clientes[0].id,
       usuarioVendedorId: gestor.id,
       valorPago: '45.00',
+      formaPagamento: 'PIX',
       statusVenda: 'CONFIRMADA',
       statusCheckin: 'PENDENTE',
     },
@@ -223,6 +224,7 @@ async function executarSeed() {
       usuarioVendedorId: gestor.id,
       codigoIngresso: 'A7K3M5Z8',
       valorPago: '45.00',
+      formaPagamento: 'PIX',
     },
   });
 
@@ -234,6 +236,7 @@ async function executarSeed() {
       clienteId: clientes[1].id,
       usuarioVendedorId: funcionario.id,
       valorPago: '90.00',
+      formaPagamento: 'CARTAO_CREDITO',
       statusVenda: 'CONFIRMADA',
       statusCheckin: 'PENDENTE',
     },
@@ -245,6 +248,7 @@ async function executarSeed() {
       usuarioVendedorId: funcionario.id,
       codigoIngresso: 'B4N6P9X2',
       valorPago: '90.00',
+      formaPagamento: 'CARTAO_CREDITO',
     },
   });
 
@@ -256,6 +260,7 @@ async function executarSeed() {
       clienteId: clientes[2].id,
       usuarioVendedorId: gestor.id,
       valorPago: '35.00',
+      formaPagamento: 'DINHEIRO',
       statusVenda: 'CONFIRMADA',
       statusCheckin: 'UTILIZADO',
       checkinPorId: funcionario.id,
@@ -269,6 +274,7 @@ async function executarSeed() {
       usuarioVendedorId: gestor.id,
       codigoIngresso: 'C5R8T3Y7',
       valorPago: '35.00',
+      formaPagamento: 'DINHEIRO',
       statusCheckin: 'UTILIZADO',
       checkinPorId: funcionario.id,
       checkinEm: new Date('2026-01-17T21:10:00-03:00'),

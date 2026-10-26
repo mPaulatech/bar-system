@@ -26,7 +26,7 @@ class PrismaFake {
         return evento;
       },
       count: ({ where }) => this.filtrar(where).length,
-      findMany: ({ where }) => this.filtrar(where),
+      findMany: ({ where, skip = 0, take }) => this.filtrar(where).slice(skip, take === undefined ? undefined : skip + take),
       findFirst: ({ where }) => this.filtrar(where)[0] ?? null,
       update: ({ where, data }) => {
         const evento = this.eventos.find((item) => item.id === where.id);
@@ -56,8 +56,10 @@ class PrismaFake {
     return this.eventos.filter((evento) => evento.estabelecimentoId === where.estabelecimentoId
       && (!where.id || evento.id === where.id)
       && (!where.status || evento.status === where.status)
-      && (!where.generoMusical
-        || evento.generoMusical.toLowerCase().includes(where.generoMusical.contains.toLowerCase())));
+        && (!where.nome
+          || evento.nome.toLowerCase().includes(where.nome.contains.toLowerCase()))
+        && (!where.generoMusical
+          || evento.generoMusical.toLowerCase().includes(where.generoMusical.contains.toLowerCase())));
   }
 }
 
@@ -95,6 +97,7 @@ test('gestor cria e lista eventos, funcionário recebe 403 ao criar', async () =
   const lista = await requisitar(aplicacao, '/v1/eventos', {
     headers: { authorization: `Bearer ${token(1, 'FUNCIONARIO')}` },
   });
+
   assert.equal((await lista.json()).total, 1);
   const proibido = await requisitar(aplicacao, '/v1/eventos', json({
     method: 'POST', headers: { authorization: `Bearer ${token(1, 'FUNCIONARIO')}` }, body: evento,
@@ -102,7 +105,47 @@ test('gestor cria e lista eventos, funcionário recebe 403 ao criar', async () =
   assert.equal(proibido.status, 403);
 });
 
-test('evento de outro estabelecimento retorna 404 e venda encerra evento', async () => {
+test('lista eventos por nome, combina filtros, pagina e isola estabelecimentos', async () => {
+  const prisma = new PrismaFake();
+  for (let id = 1; id <= 25; id += 1) {
+    prisma.eventos.push({
+      id,
+      estabelecimentoId: 1,
+      nome: id % 2 === 0 ? `Festival Rock ${id}` : `Festival Jazz ${id}`,
+      generoMusical: id % 2 === 0 ? 'Rock' : 'Jazz',
+      dataHora: new Date(`2026-11-${String((id % 9) + 1).padStart(2, '0')}T22:00:00Z`),
+      status: id % 2 === 0 ? 'ATIVO' : 'ENCERRADO',
+      duracaoHoras: 12,
+    });
+  }
+  prisma.eventos.push({
+    id: 26, estabelecimentoId: 2, nome: 'Festival Rock privado', generoMusical: 'Rock',
+    dataHora: new Date(), status: 'ATIVO', duracaoHoras: 12,
+  });
+  const aplicacao = criarAplicacao(configuracao, { prisma });
+  const autorizacao = `Bearer ${token(1, 'FUNCIONARIO')}`;
+
+  const resposta = await requisitar(aplicacao, '/v1/eventos?nome=Rock&generoMusical=Rock&status=ATIVO&pagina=2&limite=5', {
+    headers: { authorization: autorizacao },
+  });
+  const corpo = await resposta.json();
+  assert.equal(resposta.status, 200);
+  assert.equal(corpo.total, 12);
+  assert.equal(corpo.totalPaginas, 3);
+  assert.equal(corpo.pagina, 2);
+  assert.equal(corpo.dados.length, 5);
+  assert.ok(corpo.dados.every((evento) => evento.estabelecimentoId === 1 && evento.nome.includes('Rock')));
+
+  const buscaSomentePorNome = await requisitar(aplicacao, '/v1/eventos?nome=Jazz%203&pagina=1&limite=20', {
+    headers: { authorization: autorizacao },
+  });
+  const corpoBuscaSomentePorNome = await buscaSomentePorNome.json();
+  assert.equal(buscaSomentePorNome.status, 200);
+  assert.equal(corpoBuscaSomentePorNome.total, 1);
+  assert.equal(corpoBuscaSomentePorNome.dados[0].nome, 'Festival Jazz 3');
+});
+
+test('exclui evento sem vendas, rejeita evento vendido e isola estabelecimentos', async () => {
   const prisma = new PrismaFake();
   prisma.eventos.push({
     id: 10, estabelecimentoId: 2, nome: 'Privado', generoMusical: 'Jazz',
@@ -112,18 +155,40 @@ test('evento de outro estabelecimento retorna 404 e venda encerra evento', async
     id: 11, estabelecimentoId: 1, nome: 'Vendido', generoMusical: 'Jazz',
     dataHora: new Date(), status: 'ATIVO', duracaoHoras: 12,
   });
+  prisma.eventos.push({
+    id: 12, estabelecimentoId: 1, nome: 'Sem vendas', generoMusical: 'Rock',
+    dataHora: new Date(), status: 'ATIVO', duracaoHoras: 12,
+  });
   prisma.vendas.push({ estabelecimentoId: 1, eventoId: 11 });
   const aplicacao = criarAplicacao(configuracao, { prisma });
+  const autorizacao = { authorization: `Bearer ${token(1, 'GESTOR')}` };
   const outro = await requisitar(aplicacao, '/v1/eventos/10', {
+    method: 'DELETE',
     headers: { authorization: `Bearer ${token(1, 'GESTOR')}` },
   });
   assert.equal(outro.status, 404);
+  const semVendas = await requisitar(aplicacao, '/v1/eventos/12', {
+    method: 'DELETE',
+    headers: autorizacao,
+  });
+  assert.equal(semVendas.status, 200);
+  assert.deepEqual(await semVendas.json(), { id: 12, excluido: true });
+
   const excluir = await requisitar(aplicacao, '/v1/eventos/11', {
     method: 'DELETE',
     headers: { authorization: `Bearer ${token(1, 'GESTOR')}` },
   });
-  assert.equal(excluir.status, 200);
-  assert.equal((await excluir.json()).status, 'ENCERRADO');
+  assert.equal(excluir.status, 409);
+  assert.deepEqual(await excluir.json(), {
+    status: 'falha',
+    mensagem: 'O evento possui vendas registradas e não pode ser excluído.',
+  });
+
+  const vendidoDepoisDaTentativa = await requisitar(aplicacao, '/v1/eventos/11', {
+    headers: autorizacao,
+  });
+  assert.equal(vendidoDepoisDaTentativa.status, 200);
+  assert.equal((await vendidoDepoisDaTentativa.json()).status, 'ATIVO');
 });
 
 test('API Key retorna texto puro uma vez e armazena somente hash', async () => {

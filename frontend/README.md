@@ -23,7 +23,12 @@ npm install
 npm run dev
 ```
 
-O projeto abre em `http://localhost:5173`.
+O projeto abre em `http://localhost:5563`.
+
+Para conectar o cadastro e o login à API local, deixe o back-end rodando em
+`http://localhost:3000`. Outro endereço pode ser informado pela variável
+`VITE_API_URL`, incluindo o prefixo `/v1` (por exemplo,
+`VITE_API_URL=http://localhost:3000/v1`).
 
 ## Build de produção
 

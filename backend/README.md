@@ -71,7 +71,9 @@ A API sobe em `http://localhost:<PORTA>` e a rota `GET /v1/saude` responde `{ "s
 | `JWT_SECRET` | Segredo que assina os tokens de login (use um texto longo e aleatório) | *(gere um valor próprio)* |
 | `JWT_EXPIRA_EM` | Validade do token de login | `8h` |
 | `PORTA` | Porta em que a API roda | `3000` |
-| `FRONTEND_URL` | Endereço do front-end liberado no CORS | `http://localhost:5173` |
+| `FRONTEND_URL` | Endereço do front-end liberado no CORS | `http://localhost:5563` |
+| `LOGIN_LIMITE_TENTATIVAS` | Quantidade de tentativas de login que falham antes do bloqueio | `10` |
+| `LOGIN_JANELA_MINUTOS` | Duração da janela do limitador de login | `15` |
 
 *(Conferir esta tabela com o `.env.example` na Etapa 16.)*
 
@@ -155,6 +157,21 @@ valor. Assim, mesmo que um usuário tente informar o ID de outro estabelecimento
 não consegue acessar seus dados. O middleware `exigirPerfil('GESTOR')` retorna
 403 para funcionários.
 
+O login possui um limitador próprio, com padrão de 10 falhas em 15 minutos.
+As variáveis `LOGIN_LIMITE_TENTATIVAS` e `LOGIN_JANELA_MINUTOS` permitem aumentar
+esses valores somente no `.env` local do backend, quando necessário para testes.
+O registro não usa esse limitador. O limitador geral de 100 requisições em 15
+minutos continua protegendo as demais rotas, mas ignora as rotas de autenticação
+para não misturar contagens.
+
+O limitador identifica o cliente pelo IP (`req.ip`), que é o comportamento
+padrão do Express quando `trust proxy` não está configurado. Portanto, neste
+projeto a API deve ficar diretamente exposta ao cliente ou atrás de uma
+configuração de proxy revisada antes de habilitar `trust proxy`. Logins bem
+sucedidos não consomem a cota (`skipSuccessfulRequests: true`); somente falhas
+permanecem na contagem, evitando bloquear usuários legítimos que conseguem
+autenticar.
+
 ## Rotas da API
 
 Todas as rotas começam com `/v1`. A tabela abaixo registra o contrato de cada
@@ -170,21 +187,21 @@ As rotas marcadas como **planejada** ainda não estão montadas no Express.
 | Usuários | `GET` | `/v1/usuarios/funcionarios` | GESTOR | Nenhum corpo | `200 OK`<br>Lista do estabelecimento do token | Implementada |
 | Usuários | `PATCH` | `/v1/usuarios/funcionarios/:id/ativo` | GESTOR | `{ "ativo": false }` | `200 OK`<br>Funcionário atualizado | Implementada |
 | Eventos | `POST` | `/v1/eventos` | GESTOR | `{ "nome": "Noite do Rock", "generoMusical": "Rock", "atracoes": "Banda X", "dataHora": "2026-11-20T22:00:00-03:00", "status": "ATIVO" }` | `201 Created`<br>Evento criado | Implementada |
-| Eventos | `GET` | `/v1/eventos` | GESTOR ou FUNCIONARIO | Consulta: `pagina`, `limite` (máx. 100), `status`, `generoMusical`, `dataInicio`, `dataFim` | `200 OK`<br>`{ "dados": [], "pagina": 1, "limite": 20, "total": 0, "totalPaginas": 0 }` | Implementada |
+| Eventos | `GET` | `/v1/eventos` | GESTOR ou FUNCIONARIO | Consulta: `pagina`, `limite` (máx. 100), `nome`, `status`, `generoMusical`, `dataInicio`, `dataFim` | `200 OK`<br>`{ "dados": [{ "id": 1, "esgotado": false }], "pagina": 1, "limite": 20, "total": 1, "totalPaginas": 1 }` | Implementada |
 | Eventos | `GET` | `/v1/eventos/ativos` | GESTOR ou FUNCIONARIO | Nenhum | `200 OK`<br>Eventos com status `ATIVO` | Implementada |
 | Eventos | `GET` | `/v1/eventos/:id` | GESTOR ou FUNCIONARIO | Nenhum | `200 OK`<br>Evento do estabelecimento | Implementada |
 | Eventos | `PATCH` | `/v1/eventos/:id` | GESTOR | Campos do evento | `200 OK`<br>Evento atualizado | Implementada |
 | Eventos | `DELETE` | `/v1/eventos/:id` | GESTOR | Nenhum | `200 OK`<br>Sem vendas exclui; com vendas muda para `ENCERRADO` | Implementada |
-| Tipos de ingresso | `POST` | `/v1/eventos/:eventoId/ingressos-tipos` | GESTOR | `{ "nome": "VIP", "preco": 90, "quantidadeDisponivel": 100 }` | `201 Created`<br>Tipo com `quantidadeRestante` | Implementada |
-| Tipos de ingresso | `GET` | `/v1/eventos/:eventoId/ingressos-tipos` | GESTOR ou FUNCIONARIO | Nenhum | `200 OK`<br>Tipos do evento com quantidade restante | Implementada |
+| Tipos de ingresso | `POST` | `/v1/eventos/:eventoId/ingressos-tipos` | GESTOR | `{ "nome": "VIP", "preco": 90, "quantidadeDisponivel": 100 }` | `201 Created`<br>Tipo com `quantidadeRestante` e `esgotado` | Implementada |
+| Tipos de ingresso | `GET` | `/v1/eventos/:eventoId/ingressos-tipos` | GESTOR ou FUNCIONARIO | Nenhum | `200 OK`<br>Tipos do evento com quantidade restante e esgotado | Implementada |
 | Tipos de ingresso | `GET` | `/v1/eventos/:eventoId/ingressos-tipos/:id` | GESTOR ou FUNCIONARIO | Nenhum | `200 OK`<br>Tipo com quantidade restante | Implementada |
 | Tipos de ingresso | `PATCH` | `/v1/eventos/:eventoId/ingressos-tipos/:id` | GESTOR | Campos do tipo | `200 OK`<br>Tipo atualizado | Implementada |
 | Tipos de ingresso | `DELETE` | `/v1/eventos/:eventoId/ingressos-tipos/:id` | GESTOR | Nenhum | `200 OK`<br>Sem vendas confirmadas exclui | Implementada |
 | Estabelecimento | `GET` | `/v1/estabelecimento` | GESTOR ou FUNCIONARIO | Nenhum | `200 OK`<br>Dados públicos do estabelecimento | Implementada |
 | Estabelecimento | `PATCH` | `/v1/estabelecimento` | GESTOR | `{ "nomeFantasia": "Novo nome", "razaoSocial": "Nova razão social" }` | `200 OK`<br>Estabelecimento atualizado | Implementada |
 | Estabelecimento | `POST` | `/v1/estabelecimento/api-key` | GESTOR | Nenhum | `201 Created`<br>API Key em texto puro, exibida somente nesta resposta | Implementada |
-| Vendas de ingressos | `POST` | `/v1/vendas-ingressos` | GESTOR ou FUNCIONARIO | `{ "eventoId": 1, "ingressoTipoId": 1, "cpf": "111.111.111-11", "nomeCliente": "Cliente" }` ou `clienteId` | `201 Created`<br>Venda com `codigoIngresso` de 8 caracteres | Implementada |
-| Vendas de ingressos | `GET` | `/v1/vendas-ingressos/:id` | GESTOR ou FUNCIONARIO | Nenhum | `200 OK`<br>Evento, tipo, valor, cliente, código e status | Implementada |
+| Vendas de ingressos | `POST` | `/v1/vendas-ingressos` | GESTOR ou FUNCIONARIO | `{ "eventoId": 1, "ingressoTipoId": 1, "quantidade": 2, "formaPagamento": "PIX", "cpf": "111.111.111-11", "nomeCliente": "Cliente" }` ou `clienteId` | `201 Created`<br>`{ "vendas": [], "quantidade": 2, "valorTotal": "180.00", "formaPagamento": "PIX" }` | Implementada |
+| Vendas de ingressos | `GET` | `/v1/vendas-ingressos/:id` | GESTOR ou FUNCIONARIO | Nenhum | `200 OK`<br>Evento, tipo, valor, forma de pagamento, cliente, código e status | Implementada |
 | Vendas de ingressos | `GET` | `/v1/vendas-ingressos` | GESTOR ou FUNCIONARIO | Consulta: `eventoId`, `vendedorId`, `dataInicio`, `dataFim`, `pagina`, `limite` | `200 OK`<br>Lista paginada de vendas | Implementada |
 | Vendas de ingressos | `POST` | `/v1/vendas-ingressos/:id/estorno` | GESTOR | Nenhum | `200 OK`<br>Venda estornada e estoque devolvido | Implementada |
 | Integração de consumo | `POST` | `/v1/integrations/consumption` | Sistema parceiro com `x-api-key` | Cabeçalho `x-api-key: <chave-da-api>` e `{ "idTransacaoExterna": "PDV-2026-0001", "valorTotal": 72.5, "dataHoraTransacao": "2026-11-20T22:30:00-03:00", "cpfCliente": "111.111.111-11", "itens": [{ "nome": "Chopp", "quantidade": 2 }] }` | `201 Created`<br>`{ "id": 1, "idTransacaoExterna": "PDV-2026-0001", "status": "recebida" }` | Planejada |

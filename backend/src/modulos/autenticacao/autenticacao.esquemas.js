@@ -32,3 +32,7 @@ export const esquemaLogin = z.object({
 export function somenteDigitos(valor) {
   return valor.replace(/\D/g, '');
 }
+
+export function normalizarCnpj(valor) {
+  return somenteDigitos(valor);
+}

@@ -14,6 +14,8 @@ class PrismaFake {
     this.eventos = [
       { id: 1, estabelecimentoId: 1, status: 'ATIVO' },
       { id: 2, estabelecimentoId: 1, status: 'ENCERRADO' },
+      { id: 3, estabelecimentoId: 1, status: 'RASCUNHO' },
+      { id: 4, estabelecimentoId: 2, status: 'ATIVO' },
     ];
     this.tipos = [];
     this.vendas = [];
@@ -58,6 +60,11 @@ class PrismaFake {
         && venda.ingressoTipoId === where.ingressoTipoId
         && venda.statusVenda === where.statusVenda
       )).length,
+    };
+    this.opcoesTransacao = [];
+    this.$transaction = async (operacao, opcoes) => {
+      this.opcoesTransacao.push(opcoes);
+      return operacao(this);
     };
   }
 }
@@ -104,7 +111,9 @@ test('gestor cria, lista quantidade restante e funcionário não edita', async (
     headers: { authorization: `Bearer ${token('FUNCIONARIO')}` },
   });
   assert.equal(lista.status, 200);
-  assert.equal((await lista.json())[0].quantidadeRestante, 9);
+  const dadosLista = (await lista.json())[0];
+  assert.equal(dadosLista.quantidadeRestante, 10);
+  assert.equal(dadosLista.esgotado, false);
 
   const proibido = await requisitar(aplicacao, `/v1/eventos/1/ingressos-tipos/${tipo.id}`, json({
     method: 'PATCH',
@@ -140,10 +149,126 @@ test('regras de evento encerrado, valores e redução abaixo do vendido', async 
   prisma.vendas.push({
     estabelecimentoId: 1, eventoId: 1, ingressoTipoId: tipo.id, statusVenda: 'CONFIRMADA',
   });
+  prisma.vendas.push({
+    estabelecimentoId: 1, eventoId: 1, ingressoTipoId: tipo.id, statusVenda: 'ESTORNADA',
+  });
   const reduzir = await requisitar(aplicacao, `/v1/eventos/1/ingressos-tipos/${tipo.id}`, json({
     method: 'PATCH',
     headers: { authorization: `Bearer ${token('GESTOR')}` },
     body: { quantidadeDisponivel: 0 },
   }));
   assert.equal(reduzir.status, 409);
+  assert.equal(prisma.tipos.find((item) => item.id === tipo.id).quantidadeDisponivel, 2);
+
+  const igualAoMinimo = await requisitar(aplicacao, `/v1/eventos/1/ingressos-tipos/${tipo.id}`, json({
+    method: 'PATCH',
+    headers: { authorization: 'Bearer ' + token('GESTOR') },
+    body: { quantidadeDisponivel: 1 },
+  }));
+  assert.equal(igualAoMinimo.status, 200);
+  assert.equal((await igualAoMinimo.json()).quantidadeRestante, 1);
+  assert.equal(prisma.opcoesTransacao.at(-1).isolationLevel, 'Serializable');
+});
+
+test('lote sem vendas permite redução válida e aumento', async () => {
+  const prisma = new PrismaFake();
+  const aplicacao = criarAplicacao(configuracao, { prisma });
+  const criado = await requisitar(aplicacao, '/v1/eventos/1/ingressos-tipos', json({
+    method: 'POST',
+    headers: { authorization: 'Bearer ' + token('GESTOR') },
+    body: { nome: 'Pista', preco: 45, quantidadeDisponivel: 10 },
+  }));
+  const tipo = await criado.json();
+
+  const reduzir = await requisitar(aplicacao, `/v1/eventos/1/ingressos-tipos/${tipo.id}`, json({
+    method: 'PATCH',
+    headers: { authorization: 'Bearer ' + token('GESTOR') },
+    body: { quantidadeDisponivel: 4 },
+  }));
+  assert.equal(reduzir.status, 200);
+  assert.equal((await reduzir.json()).quantidadeRestante, 4);
+
+  const aumentar = await requisitar(aplicacao, `/v1/eventos/1/ingressos-tipos/${tipo.id}`, json({
+    method: 'PATCH',
+    headers: { authorization: 'Bearer ' + token('GESTOR') },
+    body: { quantidadeDisponivel: 12 },
+  }));
+  assert.equal(aumentar.status, 200);
+  assert.equal((await aumentar.json()).quantidadeRestante, 12);
+});
+
+test('não edita lote de evento encerrado e mantém os dados', async () => {
+  const prisma = new PrismaFake();
+  const aplicacao = criarAplicacao(configuracao, { prisma });
+  const criado = await requisitar(aplicacao, '/v1/eventos/1/ingressos-tipos', json({
+    method: 'POST',
+    headers: { authorization: 'Bearer ' + token('GESTOR') },
+    body: { nome: 'Pista', preco: 45, quantidadeDisponivel: 10 },
+  }));
+  const tipo = await criado.json();
+  const original = { ...prisma.tipos.find((item) => item.id === tipo.id) };
+  prisma.eventos.find((evento) => evento.id === 1).status = 'ENCERRADO';
+
+  const resposta = await requisitar(aplicacao, `/v1/eventos/1/ingressos-tipos/${tipo.id}`, json({
+    method: 'PATCH',
+    headers: { authorization: 'Bearer ' + token('GESTOR') },
+    body: { nome: 'Pista nova', preco: 60, quantidadeDisponivel: 20 },
+  }));
+
+  assert.equal(resposta.status, 409);
+  assert.deepEqual(prisma.tipos.find((item) => item.id === tipo.id), original);
+});
+
+test('continua editando lotes de eventos ativos e em rascunho', async () => {
+  const prisma = new PrismaFake();
+  const aplicacao = criarAplicacao(configuracao, { prisma });
+  const ativo = await requisitar(aplicacao, '/v1/eventos/1/ingressos-tipos', json({
+    method: 'POST',
+    headers: { authorization: 'Bearer ' + token('GESTOR') },
+    body: { nome: 'Pista', preco: 45, quantidadeDisponivel: 10 },
+  }));
+  const tipoAtivo = await ativo.json();
+  const rascunho = await requisitar(aplicacao, '/v1/eventos/3/ingressos-tipos', json({
+    method: 'POST',
+    headers: { authorization: 'Bearer ' + token('GESTOR') },
+    body: { nome: 'VIP', preco: 90, quantidadeDisponivel: 5 },
+  }));
+  const tipoRascunho = await rascunho.json();
+
+  const atualizarAtivo = await requisitar(aplicacao, `/v1/eventos/1/ingressos-tipos/${tipoAtivo.id}`, json({
+    method: 'PATCH',
+    headers: { authorization: 'Bearer ' + token('GESTOR') },
+    body: { nome: 'Pista atualizada' },
+  }));
+  const atualizarRascunho = await requisitar(aplicacao, `/v1/eventos/3/ingressos-tipos/${tipoRascunho.id}`, json({
+    method: 'PATCH',
+    headers: { authorization: 'Bearer ' + token('GESTOR') },
+    body: { nome: 'VIP atualizada' },
+  }));
+
+  assert.equal(atualizarAtivo.status, 200);
+  assert.equal((await atualizarAtivo.json()).nome, 'Pista atualizada');
+  assert.equal(atualizarRascunho.status, 200);
+  assert.equal((await atualizarRascunho.json()).nome, 'VIP atualizada');
+});
+
+test('não permite editar lote por evento de outro estabelecimento', async () => {
+  const prisma = new PrismaFake();
+  const aplicacao = criarAplicacao(configuracao, { prisma });
+  const criado = await requisitar(aplicacao, '/v1/eventos/1/ingressos-tipos', json({
+    method: 'POST',
+    headers: { authorization: 'Bearer ' + token('GESTOR') },
+    body: { nome: 'Pista', preco: 45, quantidadeDisponivel: 10 },
+  }));
+  const tipo = await criado.json();
+  const original = { ...prisma.tipos.find((item) => item.id === tipo.id) };
+
+  const resposta = await requisitar(aplicacao, `/v1/eventos/4/ingressos-tipos/${tipo.id}`, json({
+    method: 'PATCH',
+    headers: { authorization: 'Bearer ' + token('GESTOR') },
+    body: { nome: 'Acesso indevido' },
+  }));
+
+  assert.equal(resposta.status, 404);
+  assert.deepEqual(prisma.tipos.find((item) => item.id === tipo.id), original);
 });
