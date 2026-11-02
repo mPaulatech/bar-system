@@ -154,6 +154,7 @@ model Evento {
   generoMusical     String       @map("genero_musical")
   atracoes          String?
   dataHora          DateTime     @map("data_hora")
+  capacidade        Int?
   /// Duração prevista. O cruzamento usa isso para descobrir a qual evento
   /// pertence uma venda de consumo que chegou sem evento informado.
   duracaoHoras      Int          @default(12) @map("duracao_horas")

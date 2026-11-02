@@ -63,6 +63,7 @@ CREATE TABLE eventos (
     genero_musical     TEXT          NOT NULL,
     atracoes           TEXT,
     data_hora          TIMESTAMP(3)  NOT NULL,
+    capacidade         INTEGER,
     duracao_horas      INTEGER       NOT NULL DEFAULT 12,
     status             status_evento NOT NULL DEFAULT 'RASCUNHO',
     criado_em          TIMESTAMP(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP,

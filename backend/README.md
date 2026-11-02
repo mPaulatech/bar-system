@@ -26,6 +26,7 @@ PORTA=3000
 FRONTEND_URL="http://localhost:5173"
 LOGIN_LIMITE_TENTATIVAS=10
 LOGIN_JANELA_MINUTOS=15
+PORTA_RECOMENDACOES=3001
 ```
 
 Não compartilhe nem envie o `.env` ao Git. A URL do banco é lida por `prisma.config.js`; o Prisma Client usa o adapter PostgreSQL.
@@ -35,9 +36,11 @@ npx prisma generate       # gera o Prisma Client
 npx prisma migrate dev    # aplica migrations
 npx prisma db seed        # opcional: carrega dados de exemplo
 npm run dev               # inicia a API em modo de desenvolvimento
+npm run recomendacoes:dev # inicia o serviço separado de recomendações
 ```
 
 `npm start` inicia a API sem reinicialização automática. A rota `GET /v1/saude` deve responder `{ "status": "ok" }`.
+O serviço de recomendações é um processo independente, usa as mesmas variáveis `DATABASE_URL`, `JWT_SECRET` e `FRONTEND_URL`, e responde em `http://localhost:3001`. Em produção, inicie-o com `npm run recomendacoes`; a porta pode ser alterada por `PORTA_RECOMENDACOES`.
 
 ## Testes
 
@@ -76,6 +79,15 @@ Todas as rotas começam com `/v1`. Rotas protegidas recebem `Authorization: Bear
 | `POST /v1/vendas-ingressos/:id/estorno` | Gestor | Estornar venda |
 
 Os campos obrigatórios de cada corpo e os parâmetros de consulta são validados com Zod. O cadastro de estabelecimento espera dados da casa e do gestor; o login recebe e-mail e senha; uma venda recebe evento, tipo, quantidade e forma de pagamento, além do cliente. Erros seguem o formato `{ "status": "...", "mensagem": "..." }`.
+
+### Serviço de recomendações
+
+O processo separado expõe `GET http://localhost:3001/v1/recomendacoes`, disponível somente para gestores autenticados com o mesmo JWT da API principal. As recomendações são calculadas em cada requisição e não são armazenadas.
+
+- Clientes sem compra confirmada de ingresso ou consumo há mais de 60 dias são sugeridos para contato. Para clientes sem nenhuma atividade registrada, o tempo é contado desde o cadastro.
+- A baixa adesão usa a média de ocupação das três edições encerradas mais recentes agrupadas pelo `generoMusical` existente. São necessárias pelo menos duas edições com capacidade conhecida; o alerta aparece abaixo de 40%.
+- A capacidade é armazenada em `Evento.capacidade`. O campo é opcional para manter compatibilidade com eventos antigos; eventos sem capacidade não entram no cálculo.
+- O seed cria edições fictícias: Rock com ocupação alta e Pop abaixo de 40%, além de clientes com atividades em datas relativas à execução do seed.
 
 ### Integração de consumo
 

@@ -1,6 +1,12 @@
 import bcrypt from 'bcryptjs';
 import prisma from '../src/banco/prisma.js';
 
+const MILISSEGUNDOS_DIA = 24 * 60 * 60 * 1000;
+
+function dataComDeslocamento(dias) {
+  return new Date(Date.now() + dias * MILISSEGUNDOS_DIA);
+}
+
 // Atualiza ou cria um evento, pois o schema não possui uma chave única para o nome.
 async function obterOuCriarEvento(dados) {
   const eventoExistente = await prisma.evento.findFirst({
@@ -38,6 +44,72 @@ async function obterOuCriarIngressoTipo(dados) {
   }
 
   return prisma.ingressoTipo.create({ data: dados });
+}
+
+async function popularEdicoesParaRecomendacoes(estabelecimentoId, usuarioVendedorId) {
+  const configuracoes = [
+    { generoMusical: 'Rock', prefixo: 'R', vendas: [8, 7, 9] },
+    { generoMusical: 'Pop', prefixo: 'P', vendas: [2, 3, 4] },
+  ];
+  const datasEdicoes = [-30, -90, -150];
+  const eventos = [];
+
+  for (const configuracao of configuracoes) {
+    for (let indice = 0; indice < datasEdicoes.length; indice += 1) {
+      const edicao = indice + 1;
+      const dataHora = dataComDeslocamento(datasEdicoes[indice]);
+      const capacidade = 10;
+      const quantidadeVendida = configuracao.vendas[indice];
+      const evento = await obterOuCriarEvento({
+        estabelecimentoId,
+        nome: `${configuracao.generoMusical} - Edição de teste ${edicao}`,
+        generoMusical: configuracao.generoMusical,
+        atracoes: `Atração fictícia ${edicao}`,
+        dataHora,
+        capacidade,
+        duracaoHoras: 6,
+        status: 'ENCERRADO',
+      });
+      const tipoIngresso = await obterOuCriarIngressoTipo({
+        estabelecimentoId,
+        eventoId: evento.id,
+        nome: 'Pista',
+        preco: '40.00',
+        quantidadeDisponivel: capacidade - quantidadeVendida,
+      });
+
+      for (let venda = 1; venda <= quantidadeVendida; venda += 1) {
+        const codigoIngresso = `${configuracao.prefixo}${edicao}${String(venda).padStart(6, '0')}`;
+        await prisma.vendaIngresso.upsert({
+          where: { codigoIngresso },
+          update: {
+            eventoId: evento.id,
+            ingressoTipoId: tipoIngresso.id,
+            clienteId: null,
+            usuarioVendedorId,
+            valorPago: '40.00',
+            formaPagamento: 'PIX',
+            statusVenda: 'CONFIRMADA',
+            statusCheckin: 'PENDENTE',
+            criadoEm: dataHora,
+          },
+          create: {
+            estabelecimentoId,
+            eventoId: evento.id,
+            ingressoTipoId: tipoIngresso.id,
+            usuarioVendedorId,
+            codigoIngresso,
+            valorPago: '40.00',
+            formaPagamento: 'PIX',
+            criadoEm: dataHora,
+          },
+        });
+      }
+      eventos.push(evento);
+    }
+  }
+
+  return eventos;
 }
 
 async function executarSeed() {
@@ -165,7 +237,8 @@ async function executarSeed() {
     nome: 'Sexta do Rock',
     generoMusical: 'Rock',
     atracoes: 'Banda Horizonte',
-    dataHora: new Date('2026-11-20T21:00:00-03:00'),
+    dataHora: dataComDeslocamento(18),
+    capacidade: 700,
     duracaoHoras: 8,
     status: 'ATIVO',
   });
@@ -175,7 +248,7 @@ async function executarSeed() {
     nome: 'Festival de Verão',
     generoMusical: 'Pop',
     atracoes: 'DJ Sol e convidados',
-    dataHora: new Date('2026-01-17T20:00:00-03:00'),
+    dataHora: dataComDeslocamento(-180),
     duracaoHoras: 8,
     status: 'ENCERRADO',
   });
@@ -213,6 +286,7 @@ async function executarSeed() {
       formaPagamento: 'PIX',
       statusVenda: 'CONFIRMADA',
       statusCheckin: 'PENDENTE',
+      criadoEm: dataComDeslocamento(-5),
     },
     create: {
       estabelecimentoId: estabelecimento.id,
@@ -223,6 +297,7 @@ async function executarSeed() {
       codigoIngresso: 'A7K3M5Z8',
       valorPago: '45.00',
       formaPagamento: 'PIX',
+      criadoEm: dataComDeslocamento(-5),
     },
   });
 
@@ -237,6 +312,7 @@ async function executarSeed() {
       formaPagamento: 'CARTAO_CREDITO',
       statusVenda: 'CONFIRMADA',
       statusCheckin: 'PENDENTE',
+      criadoEm: dataComDeslocamento(-75),
     },
     create: {
       estabelecimentoId: estabelecimento.id,
@@ -247,6 +323,7 @@ async function executarSeed() {
       codigoIngresso: 'B4N6P9X2',
       valorPago: '90.00',
       formaPagamento: 'CARTAO_CREDITO',
+      criadoEm: dataComDeslocamento(-75),
     },
   });
 
@@ -262,7 +339,8 @@ async function executarSeed() {
       statusVenda: 'CONFIRMADA',
       statusCheckin: 'UTILIZADO',
       checkinPorId: funcionario.id,
-      checkinEm: new Date('2026-01-17T21:10:00-03:00'),
+      checkinEm: eventoEncerrado.dataHora,
+      criadoEm: eventoEncerrado.dataHora,
     },
     create: {
       estabelecimentoId: estabelecimento.id,
@@ -275,9 +353,12 @@ async function executarSeed() {
       formaPagamento: 'DINHEIRO',
       statusCheckin: 'UTILIZADO',
       checkinPorId: funcionario.id,
-      checkinEm: new Date('2026-01-17T21:10:00-03:00'),
+      checkinEm: eventoEncerrado.dataHora,
+      criadoEm: eventoEncerrado.dataHora,
     },
   });
+
+  const eventosTeste = await popularEdicoesParaRecomendacoes(estabelecimento.id, gestor.id);
 
   await prisma.vendaConsumoApi.upsert({
     where: {
@@ -287,20 +368,20 @@ async function executarSeed() {
       },
     },
     update: {
-      eventoId: eventoAtivo.id,
+      eventoId: eventosTeste[0].id,
       clienteId: clientes[0].id,
       valorTotal: '72.50',
-      dataHoraTransacao: new Date('2026-11-20T22:30:00-03:00'),
+      dataHoraTransacao: new Date(eventosTeste[0].dataHora.getTime() + 60 * 60 * 1000),
       itens: [{ nome: 'Chopp', quantidade: 2 }, { nome: 'Porção', quantidade: 1 }],
       payloadOriginal: { origem: 'seed', valor: 72.5 },
     },
     create: {
       estabelecimentoId: estabelecimento.id,
-      eventoId: eventoAtivo.id,
+      eventoId: eventosTeste[0].id,
       clienteId: clientes[0].id,
       idTransacaoExterna: 'SEED-CONSUMO-001',
       valorTotal: '72.50',
-      dataHoraTransacao: new Date('2026-11-20T22:30:00-03:00'),
+      dataHoraTransacao: new Date(eventosTeste[0].dataHora.getTime() + 60 * 60 * 1000),
       itens: [{ nome: 'Chopp', quantidade: 2 }, { nome: 'Porção', quantidade: 1 }],
       payloadOriginal: { origem: 'seed', valor: 72.5 },
     },

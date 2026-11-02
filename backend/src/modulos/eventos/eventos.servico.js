@@ -7,6 +7,7 @@ const camposEvento = {
   generoMusical: true,
   atracoes: true,
   dataHora: true,
+  capacidade: true,
   duracaoHoras: true,
   status: true,
   criadoEm: true,

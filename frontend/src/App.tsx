@@ -1,9 +1,10 @@
 import { useState, type FormEvent } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { Building2, CalendarDays, Headphones, LogOut, ShoppingCart } from 'lucide-react'
+import { Building2, CalendarDays, Headphones, Lightbulb, LogOut, ShoppingCart } from 'lucide-react'
 import PaginaEstabelecimento from './pages/Estabelecimento'
 import Eventos from './pages/Eventos'
 import Pdv from './pages/Pdv'
+import Recomendacoes from './pages/Recomendacoes'
 import { cadastrarCasa, entrar } from './servicos/index'
 import { entrar as entrarSessao, sair, type AppDispatch, type RootState } from './store'
 import './App.css'
@@ -46,7 +47,8 @@ function App() {
   if (!sessao.token) { window.history.replaceState({}, '', '/login'); return <Acesso aoIniciarEnvio={() => setMensagemSucesso('')} /> }
   const pdv = rota === '/pdv'
   const estabelecimento = rota === '/estabelecimento'
+  const recomendacoes = rota === '/recomendacoes' && sessao.usuario?.perfil === 'GESTOR'
   const navegar = (destino: string) => { window.history.pushState({}, '', destino); setRota(destino) }
-  return <div className="aplicativo"><aside className="barra-lateral"><div className="marca"><span className="marca-simbolo"><Headphones size={21} /></span><span className="marca-texto"><strong>BACKSTAGE</strong><span>GESTÃO DE EVENTOS</span></span></div><nav className="navegacao"><button className={`item-menu${!pdv && !estabelecimento ? ' ativo' : ''}`} onClick={() => navegar('/eventos')}><CalendarDays size={18} /> Eventos</button><button className={`item-menu${pdv ? ' ativo' : ''}`} onClick={() => navegar('/pdv')}><ShoppingCart size={18} /> PDV</button>{sessao.usuario?.perfil === 'GESTOR' && <button className={`item-menu${estabelecimento ? ' ativo' : ''}`} onClick={() => navegar('/estabelecimento')}><Building2 size={18} /> Estabelecimento</button>}</nav><button className="item-menu" onClick={() => { dispatch(sair()); setMensagemSucesso(''); navegar('/login') }}><LogOut size={18} /> Sair</button></aside><main className="conteudo-principal"><header className="cabecalho"><span>{pdv ? 'PDV' : estabelecimento ? 'Estabelecimento' : 'Eventos'}</span><span>{sessao.usuario?.nome}</span></header><div className="area-conteudo">{pdv ? <Pdv /> : estabelecimento ? <PaginaEstabelecimento /> : <Eventos />}</div></main></div>
+  return <div className="aplicativo"><aside className="barra-lateral"><div className="marca"><span className="marca-simbolo"><Headphones size={21} /></span><span className="marca-texto"><strong>BACKSTAGE</strong><span>GESTÃO DE EVENTOS</span></span></div><nav className="navegacao"><button className={`item-menu${!pdv && !estabelecimento && !recomendacoes ? ' ativo' : ''}`} onClick={() => navegar('/eventos')}><CalendarDays size={18} /> Eventos</button><button className={`item-menu${pdv ? ' ativo' : ''}`} onClick={() => navegar('/pdv')}><ShoppingCart size={18} /> PDV</button>{sessao.usuario?.perfil === 'GESTOR' && <><button className={`item-menu${estabelecimento ? ' ativo' : ''}`} onClick={() => navegar('/estabelecimento')}><Building2 size={18} /> Estabelecimento</button><button className={`item-menu${recomendacoes ? ' ativo' : ''}`} onClick={() => navegar('/recomendacoes')}><Lightbulb size={18} /> Recomendações</button></>}</nav><button className="item-menu" onClick={() => { dispatch(sair()); setMensagemSucesso(''); navegar('/login') }}><LogOut size={18} /> Sair</button></aside><main className="conteudo-principal"><header className="cabecalho"><span>{pdv ? 'PDV' : estabelecimento ? 'Estabelecimento' : recomendacoes ? 'Recomendações' : 'Eventos'}</span><span>{sessao.usuario?.nome}</span></header><div className="area-conteudo">{pdv ? <Pdv /> : estabelecimento ? <PaginaEstabelecimento /> : recomendacoes ? <Recomendacoes /> : <Eventos />}</div></main></div>
 }
 export default App

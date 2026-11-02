@@ -8,6 +8,7 @@ export type Evento = {
   generoMusical: string
   atracoes: string | null
   dataHora: string
+  capacidade?: number | null
   duracaoHoras: number
   status: StatusEvento
   esgotado: boolean
@@ -36,6 +37,7 @@ export type DadosEvento = {
   generoMusical: string
   atracoes?: string | null
   dataHora: string
+  capacidade?: number
   duracaoHoras?: number
   status?: StatusEvento
 }
@@ -89,3 +91,22 @@ export type Estabelecimento = {
 }
 
 export type DadosEstabelecimento = Pick<Estabelecimento, 'nomeFantasia' | 'razaoSocial'>
+
+export type RecomendacaoClienteInativo = {
+  clienteId: number
+  nome: string
+  diasInativo: number
+  mensagem: string
+}
+
+export type RecomendacaoTipoEvento = {
+  generoMusical: string
+  ocupacaoMediaPercentual: number
+  edicoesAnalisadas: number
+  mensagem: string
+}
+
+export type RespostaRecomendacoes = {
+  clientesInativos: RecomendacaoClienteInativo[]
+  tiposEventoBaixaAdesao: RecomendacaoTipoEvento[]
+}

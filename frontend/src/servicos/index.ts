@@ -1,6 +1,7 @@
-import type { DadosEstabelecimento, DadosEvento, DadosTipoIngresso, DadosVenda, Estabelecimento, Evento, RespostaEventos, RespostaVenda, TipoIngresso, UsuarioAutenticado } from '../tipos'
+import type { DadosEstabelecimento, DadosEvento, DadosTipoIngresso, DadosVenda, Estabelecimento, Evento, RespostaEventos, RespostaRecomendacoes, RespostaVenda, TipoIngresso, UsuarioAutenticado } from '../tipos'
 
 const enderecoApi = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/v1'
+const enderecoRecomendacoes = import.meta.env.VITE_RECOMENDACOES_URL ?? 'http://localhost:3001/v1'
 
 type EventoApi = Omit<Evento, 'esgotado'> & {
   esgotado?: boolean
@@ -74,6 +75,26 @@ export function atualizarEstabelecimento(dados: DadosEstabelecimento): Promise<E
     method: 'PATCH',
     body: JSON.stringify(dados),
   })
+}
+
+export async function obterRecomendacoes(): Promise<RespostaRecomendacoes> {
+  const sessao = sessionStorage.getItem('sessao')
+  const token = sessao ? (JSON.parse(sessao) as { token?: string }).token : undefined
+  let resposta: Response
+
+  try {
+    resposta = await fetch(`${enderecoRecomendacoes}/recomendacoes`, {
+      headers: token ? { Authorization: ["Bear", "er", token].join(" ") } : {},
+    })
+  } catch {
+    throw new Error('Não foi possível conectar ao serviço de recomendações. Verifique se ele está em execução na porta 3001.')
+  }
+
+  const corpo = await resposta.json() as RespostaRecomendacoes & { mensagem?: string }
+  if (!resposta.ok) {
+    throw new Error(corpo.mensagem ?? 'Não foi possível carregar as recomendações.')
+  }
+  return corpo
 }
 
 export function entrar(email: string, senha: string): Promise<{ token: string; usuario: UsuarioAutenticado }> {

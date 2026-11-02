@@ -10,6 +10,8 @@
   "scripts": {
     "dev": "node --watch --env-file=.env src/servidor.js",
     "start": "node --env-file=.env src/servidor.js",
+    "recomendacoes": "node --env-file=.env recomendacoes/servidor.js",
+    "recomendacoes:dev": "node --watch --env-file=.env recomendacoes/servidor.js",
     "test": "node --test"
   },
   "keywords": [],

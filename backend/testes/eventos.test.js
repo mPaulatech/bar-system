@@ -88,12 +88,13 @@ test('gestor cria e lista eventos, funcionário recebe 403 ao criar', async () =
   const prisma = new PrismaFake();
   const aplicacao = criarAplicacao(configuracao, { prisma });
   const evento = {
-    nome: 'Noite Rock', generoMusical: 'Rock', dataHora: '2026-11-20T22:00:00Z',
+    nome: 'Noite Rock', generoMusical: 'Rock', dataHora: '2026-11-20T22:00:00Z', capacidade: 150,
   };
   const criado = await requisitar(aplicacao, '/v1/eventos', json({
     method: 'POST', headers: { authorization: `Bearer ${token(1, 'GESTOR')}` }, body: evento,
   }));
   assert.equal(criado.status, 201);
+  assert.equal((await criado.json()).capacidade, 150);
   const lista = await requisitar(aplicacao, '/v1/eventos', {
     headers: { authorization: `Bearer ${token(1, 'FUNCIONARIO')}` },
   });

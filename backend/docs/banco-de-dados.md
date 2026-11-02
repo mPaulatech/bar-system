@@ -42,6 +42,7 @@ erDiagram
         string genero_musical
         string atracoes "opcional"
         datetime data_hora
+        int capacidade "opcional; usado na taxa de ocupação"
         int duracao_horas
         enum status "RASCUNHO | ATIVO | ENCERRADO"
         datetime criado_em
@@ -153,7 +154,7 @@ Todas as tabelas de negócio também ligam ao `ESTABELECIMENTOS` pela coluna `es
 |---|---|---|
 | `estabelecimentos` | `api_key_consumo` virou `api_key_hash` + `api_key_prefixo`; novo `email_contato` | Nunca se guarda uma chave de acesso em texto puro. Se o banco vazar, o hash não serve para nada. O prefixo só serve para o gestor reconhecer qual chave é qual |
 | `usuarios` | novos `senha_hash` e `criado_em`/`atualizado_em`; `email` único no sistema inteiro; `cpf` opcional | O diagrama não tinha onde guardar a senha. O login usa só o e-mail, então ele não pode se repetir entre casas |
-| `eventos` | novo `status` (RASCUNHO, ATIVO, ENCERRADO) e `duracao_horas` | A US05 fala em "evento ativo", então isso precisa existir. A duração ajuda a descobrir a qual evento pertence um consumo que chegou sem evento informado |
+| `eventos` | novo `status` (RASCUNHO, ATIVO, ENCERRADO), `duracao_horas` e `capacidade` (opcional) | A US05 fala em "evento ativo", então isso precisa existir. A duração ajuda a descobrir a qual evento pertence um consumo que chegou sem evento informado. A capacidade permite calcular a taxa de ocupação das edições |
 | `clientes` | CPF **único por estabelecimento**; novos `telefone` e `email` (opcionais); `observacao_restricao` saiu | É a "identidade única" da US06. Telefone e e-mail preparam o envio de promoções. As restrições ganharam uma tabela própria (abaixo) |
 | `restricoes_clientes` (**nova**) | tipo, descrição, se bloqueia a entrada, status, quem criou, quem resolveu, datas | Um único campo de texto não guarda histórico nem permite saber quem marcou o cliente. Com a tabela, a restrição resolvida fica registrada e o check-in consegue barrar só quando `bloqueia_entrada = true` |
 | `ingressos_tipos` | novo `estabelecimento_id` (repetido de propósito) | Toda consulta pode filtrar direto por estabelecimento, sem JOIN. Reduz o risco de vazar dado de outra casa |
@@ -331,6 +332,7 @@ CREATE TABLE eventos (
     genero_musical     TEXT          NOT NULL,
     atracoes           TEXT,
     data_hora          TIMESTAMP(3)  NOT NULL,
+    capacidade         INTEGER,
     duracao_horas      INTEGER       NOT NULL DEFAULT 12,
     status             status_evento NOT NULL DEFAULT 'RASCUNHO',
     criado_em          TIMESTAMP(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP,

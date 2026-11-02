@@ -8,6 +8,7 @@ const camposEvento = {
   generoMusical: z.string().trim().min(2),
   atracoes: z.string().trim().optional().nullable(),
   dataHora,
+  capacidade: z.coerce.number().int().positive().optional(),
   duracaoHoras: z.coerce.number().int().positive().max(72).optional(),
   status: status.optional(),
 };
