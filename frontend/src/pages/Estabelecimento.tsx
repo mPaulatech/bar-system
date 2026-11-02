@@ -64,14 +64,14 @@ function PaginaEstabelecimento() {
           <p>Consulte e mantenha atualizados os dados cadastrais da sua casa.</p>
         </div>
       </div>
-      {carregando && <div className="painel estado-estabelecimento" role="status"><LoaderCircle className="girando" size={18} /><span>Carregando os dados do estabelecimento...</span></div>}
+      {carregando && <div className="painel estado-estabelecimento" role="status"><LoaderCircle className="girando" size={23} /><span>Carregando os dados do estabelecimento...</span></div>}
       {!carregando && <div className="painel painel-estabelecimento">
         <div className="cabecalho-painel">
-          <div className="icone-painel"><Building2 size={18} /></div>
+          <div className="icone-painel"><Building2 size={23} /></div>
           <div><h2>Dados cadastrais</h2><p>Altere somente os campos permitidos para edição.</p></div>
         </div>
         {erro && <p className="mensagem-erro" role="alert">{erro}</p>}
-        {sucesso && <p className="mensagem-sucesso" role="status"><Check size={14} /> {sucesso}</p>}
+        {sucesso && <p className="mensagem-sucesso" role="status"><Check size={20} /> {sucesso}</p>}
         <form className="formulario-estabelecimento" onSubmit={salvar}>
           <label className="campo-modal">Nome fantasia<input type="text" value={formulario.nomeFantasia} onChange={(evento) => alterarCampo('nomeFantasia', evento.target.value)} minLength={2} required /></label>
           <label className="campo-modal">Razão social<input type="text" value={formulario.razaoSocial} onChange={(evento) => alterarCampo('razaoSocial', evento.target.value)} minLength={2} required /></label>
@@ -80,7 +80,7 @@ function PaginaEstabelecimento() {
             <div className="campo-leitura"><span>E-mail de contato</span><strong>{dados?.emailContato || 'Não informado'}</strong></div>
             <p>O CNPJ e o e-mail de contato não podem ser alterados nesta tela.</p>
           </div>
-          <div className="acoes-estabelecimento"><button className="botao-primario" type="submit" disabled={salvando}>{salvando ? <><LoaderCircle className="girando" size={14} /> Salvando...</> : <><Save size={14} /> Salvar alterações</>}</button></div>
+          <div className="acoes-estabelecimento"><button className="botao-primario" type="submit" disabled={salvando}>{salvando ? <><LoaderCircle className="girando" size={20} /> Salvando...</> : <><Save size={20} /> Salvar alterações</>}</button></div>
         </form>
       </div>}
     </section>
