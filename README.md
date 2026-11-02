@@ -69,6 +69,6 @@ Com `PORTA="3000"`, a API ficará disponível em `http://localhost:3000`. Para v
 
 ## Integrantes
 
-- Maria Paula De Carvalho Silva (Frontend)
+- Maria Paula De Carvalho Silva (Fullstack)
 - Aline Aparecida Da Silva (Backend)
 - Murillo Augusto Pereira De Araujo (Backend)
