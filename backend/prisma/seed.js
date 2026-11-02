@@ -1,7 +1,5 @@
 import bcrypt from 'bcryptjs';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import prisma from '../src/banco/prisma.js';
 
 // Atualiza ou cria um evento, pois o schema não possui uma chave única para o nome.
 async function obterOuCriarEvento(dados) {
