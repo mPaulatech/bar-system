@@ -303,6 +303,25 @@ td { height: 3.5625rem; padding: 0.4375rem 0.6875rem; color: #d9d7da; border-top
 .campo-leitura strong { overflow: hidden; color: #e5e3e6; font-size: 0.6875rem; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
 .dados-somente-leitura p { grid-column: 1 / -1; color: #99999f; font-size: 0.5625rem; }
 .acoes-estabelecimento { grid-column: 1 / -1; display: flex; justify-content: flex-end; margin-top: 0.25rem; }
+.painel-integracao-consumo { max-width: 47.5rem; margin-top: 0.875rem; padding: 1.3125rem; }
+.painel-integracao-consumo .cabecalho-painel { display: flex; align-items: flex-start; gap: 0.6875rem; margin-bottom: 1.125rem; }
+.painel-integracao-consumo .cabecalho-painel h2 { margin: 0.125rem 0 0.25rem; font-size: 1.375rem; }
+.painel-integracao-consumo .cabecalho-painel p { color: var(--texto-suave); font-size: 0.625rem; }
+.integracao-chave-atual { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 0.75rem; color: var(--texto-suave); background: #292a2e; border: 0.0625rem solid #35363a; border-radius: 0.3125rem; font-size: 0.625rem; }
+.integracao-chave-atual code { color: #e5e3e6; overflow-wrap: anywhere; }
+.integracao-aviso, .consumo-ajuda { margin-top: 0.6875rem; color: var(--texto-suave); font-size: 0.5625rem; line-height: 1.5; }
+.integracao-chave-nova { display: grid; gap: 0.5rem; margin-top: 0.8125rem; padding: 0.75rem; background: #292a2e; border: 0.0625rem solid #514632; border-radius: 0.3125rem; }
+.integracao-chave-nova label { color: #e7b864; font-size: 0.5625rem; font-weight: 600; }
+.integracao-chave-nova > div { display: flex; align-items: center; gap: 0.375rem; }
+.integracao-chave-nova input { flex: 1; min-width: 0; height: 2.25rem; padding: 0 0.5625rem; color: #efedef; background: #17181a; border: 0.0625rem solid #393a3f; border-radius: 0.25rem; font-family: monospace; font-size: 0.5625rem; }
+.acoes-integracao { display: flex; justify-content: flex-end; margin-top: 0.875rem; }
+.painel-consumo-evento { margin-top: 0.875rem; overflow: hidden; }
+.painel-consumo-evento .cabecalho-eventos { align-items: center; }
+.consumo-indicadores { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.625rem; padding: 0.75rem 1.125rem; }
+.consumo-indicadores article { display: flex; min-height: 4.875rem; flex-direction: column; justify-content: center; gap: 0.5rem; padding: 0.75rem; background: #222326; border: 0.0625rem solid #2e2f33; border-radius: 0.3125rem; }
+.consumo-indicadores article span { color: var(--texto-suave); font-size: 0.5625rem; }
+.consumo-indicadores article strong { color: #f1eff0; font-family: 'Barlow Condensed', sans-serif; font-size: 1.375rem; font-weight: 600; }
+.consumo-ajuda { margin: 0; padding: 0 1.125rem 0.875rem; }
 .estado-estabelecimento { display: flex; align-items: center; gap: 0.5625rem; max-width: 47.5rem; padding: 1.3125rem; color: var(--texto-suave); font-size: 0.625rem; }
 .girando { animation: girar 800ms linear infinite; }
 .mensagem-sucesso { display: flex; align-items: center; gap: 0.375rem; }
@@ -404,6 +423,11 @@ td { height: 3.5625rem; padding: 0.4375rem 0.6875rem; color: #d9d7da; border-top
   .dados-somente-leitura { display: flex; flex-direction: column; }
   .acoes-estabelecimento { justify-content: stretch; }
   .acoes-estabelecimento .botao-primario { width: 100%; }
+  .painel-integracao-consumo { padding: 0.875rem; }
+  .integracao-chave-atual { align-items: flex-start; flex-direction: column; }
+  .integracao-chave-nova > div { align-items: stretch; flex-wrap: wrap; }
+  .integracao-chave-nova input { flex-basis: calc(100% - 2.75rem); }
+  .acoes-integracao, .acoes-integracao button { width: 100%; }
   .data-atual { gap: 0.3125rem; font-size: 0.5rem; }
   .data-atual svg { width: 0.8125rem; }
   .avatar-cabecalho { width: 1.5625rem; height: 1.5625rem; flex-basis: 1.5625rem; }
@@ -515,6 +539,7 @@ td { height: 3.5625rem; padding: 0.4375rem 0.6875rem; color: #d9d7da; border-top
   .evento-estado-link { grid-column: 2; grid-row: 1; }
   .eventos-rodape-ajuda { display: none; }
   .cabecalho-lotes { align-items: flex-start; }
+  .consumo-indicadores { padding-inline: 0.75rem; }
   .acoes-lotes { width: 100%; justify-content: flex-start; }
   .linha-lote { grid-template-columns: minmax(0, 1fr) auto 2.375rem; row-gap: 0.5rem; padding: 0.75rem; }
   .lote-identificacao { grid-column: 1; grid-row: 1; }
@@ -543,6 +568,11 @@ td { height: 3.5625rem; padding: 0.4375rem 0.6875rem; color: #d9d7da; border-top
   .evento-estado-link { gap: 0.25rem; }
   .evento-estado-link > svg { width: 0.875rem; }
   .eventos-lista-vazia { padding-inline: 0.625rem; }
+  .painel-consumo-evento .cabecalho-eventos { align-items: flex-start; }
+  .consumo-indicadores { grid-template-columns: minmax(0, 1fr); gap: 0.4375rem; }
+  .consumo-indicadores article { min-height: 3.75rem; }
+  .consumo-indicadores article strong { font-size: 1.125rem; }
+  .consumo-ajuda { padding-inline: 0.75rem; }
   .acoes-lotes { flex-direction: column; align-items: stretch; }
   .acoes-lotes button { width: 100%; }
 }

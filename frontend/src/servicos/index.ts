@@ -1,4 +1,4 @@
-import type { DadosEstabelecimento, DadosEvento, DadosTipoIngresso, DadosVenda, Estabelecimento, Evento, RespostaEventos, RespostaVenda, TipoIngresso, UsuarioAutenticado } from '../tipos'
+import type { ApiKeyEstabelecimento, DadosEstabelecimento, DadosEvento, DadosTipoIngresso, DadosVenda, Estabelecimento, Evento, RespostaEventos, RespostaVenda, ResumoConsumoEvento, TipoIngresso, UsuarioAutenticado } from '../tipos'
 
 const enderecoApi = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/v1'
 
@@ -74,6 +74,14 @@ export function atualizarEstabelecimento(dados: DadosEstabelecimento): Promise<E
     method: 'PATCH',
     body: JSON.stringify(dados),
   })
+}
+
+export function gerarApiKeyEstabelecimento(): Promise<ApiKeyEstabelecimento> {
+  return requisicaoApi<ApiKeyEstabelecimento>('/estabelecimento/api-key', { method: 'POST' })
+}
+
+export function obterResumoConsumoEvento(eventoId: number): Promise<ResumoConsumoEvento> {
+  return requisicaoApi<ResumoConsumoEvento>(`/eventos/${eventoId}/consumo/resumo`)
 }
 
 export function entrar(email: string, senha: string): Promise<{ token: string; usuario: UsuarioAutenticado }> {

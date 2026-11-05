@@ -89,3 +89,15 @@ export type Estabelecimento = {
 }
 
 export type DadosEstabelecimento = Pick<Estabelecimento, 'nomeFantasia' | 'razaoSocial'>
+
+export type ResumoConsumoEvento = {
+  evento: Pick<Evento, 'id' | 'nome' | 'dataHora'>
+  faturamentoBar: string
+  presentesCheckin: number
+  ticketMedioGeral: string | null
+}
+
+export type ApiKeyEstabelecimento = {
+  apiKey: string
+  apiKeyPrefixo: string
+}
