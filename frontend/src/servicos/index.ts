@@ -84,7 +84,7 @@ export async function obterRecomendacoes(): Promise<RespostaRecomendacoes> {
 
   try {
     resposta = await fetch(`${enderecoRecomendacoes}/recomendacoes`, {
-      headers: token ? { Authorization: ["Bear", "er", token].join(" ") } : {},
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
     })
   } catch {
     throw new Error('Não foi possível conectar ao serviço de recomendações. Verifique se ele está em execução na porta 3001.')
