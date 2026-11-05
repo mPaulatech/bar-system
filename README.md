@@ -1,74 +1,134 @@
-# bar-system
-Projeto acadêmico: sistema de centralização e gestão de bares (Fatec Guaratinguetá).
+# BACKSTAGE — Gestão de eventos e ingressos
 
-## Estrutura
+Projeto acadêmico da Fatec Guaratinguetá para gerenciar estabelecimentos, eventos e vendas de ingressos. Inclui uma interface web, uma API e um serviço separado de recomendações para gestores.
 
-```
-bar-system/
-├── frontend/
-└── backend/
-```
+## Tecnologias
 
-## Frontend
-
-Interface web do sistema. O design foi criado com o Framer AI.
-
-**Tecnologias**
-
-![HTML](https://img.shields.io/badge/HTML-E34F26?style=for-the-badge&logo=html5&logoColor=white)
-![CSS](https://img.shields.io/badge/CSS-1572B6?style=for-the-badge&logo=css3&logoColor=white)
+![Node.js](https://img.shields.io/badge/Node.js-20%2B-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)
 ![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)
+![Express](https://img.shields.io/badge/Express-000000?style=for-the-badge&logo=express&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)
+![Prisma](https://img.shields.io/badge/Prisma-2D3748?style=for-the-badge&logo=prisma&logoColor=white)
+![Zod](https://img.shields.io/badge/Zod-3E67B1?style=for-the-badge&logo=zod&logoColor=white)
+![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
 ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
-![React](https://img.shields.io/badge/React-61DAFB?style=for-the-badge&logo=react&logoColor=black)
-![Redux](https://img.shields.io/badge/Redux-764ABC?style=for-the-badge&logo=redux&logoColor=white)
+![Redux Toolkit](https://img.shields.io/badge/Redux_Toolkit-764ABC?style=for-the-badge&logo=redux&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)
 
-**Como rodar**
+## Funcionalidades
 
-```bash
-cd frontend
-npm install
-npm run dev
-```
+- Cadastro de estabelecimento e login de usuários.
+- Gerenciamento de funcionários, eventos e tipos de ingresso.
+- Venda e consulta de ingressos, com possibilidade de estorno.
+- Recomendações para gestores, servidas por um processo separado.
+- Interface web para eventos, PDV e dados do estabelecimento.
+- Isolamento dos dados por estabelecimento.
 
-## Backend
+## Tecnologias usadas
 
-API do sistema, desenvolvida com Node.js, Express, PostgreSQL e Prisma.
+- **API:** Node.js, JavaScript, Express, PostgreSQL, Prisma e Zod.
+- **Interface:** React, TypeScript, Redux Toolkit e Vite.
+- **Autenticação e proteção:** JWT, bcryptjs, Helmet, CORS e express-rate-limit.
+- **Testes da API:** executor nativo do Node.js (`node --test`).
 
-**Pré-requisitos**
+## Como rodar localmente
 
-- Node.js 20 ou mais novo
-- Banco de dados PostgreSQL
+### Pré-requisitos
 
-**Como rodar**
+- Node.js 20.19 ou mais recente e npm.
+- PostgreSQL em execução.
+
+### Instalação
+
+Na raiz do projeto, instale as dependências:
 
 ```bash
 cd backend
 npm install
-cp .env.example .env
+
+cd ../frontend
+npm install
 ```
 
-O `.env.example` contém a `DATABASE_URL`. Complete o arquivo `.env` com as outras variáveis obrigatórias:
+Crie `backend/.env` com as configurações abaixo. Substitua os valores de exemplo pelos dados locais do PostgreSQL e por um segredo próprio.
 
 ```env
-JWT_SECRET="substitua-por-um-segredo-aleatorio-com-pelo-menos-16-caracteres"
+DATABASE_URL="postgresql://USUARIO:SENHA@localhost:5432/bar_system?schema=public"
+JWT_SECRET="substitua-por-um-segredo-com-pelo-menos-16-caracteres"
 JWT_EXPIRA_EM="8h"
-PORTA="3000"
-FRONTEND_URL="http://localhost:5173"
+PORTA=3000
+FRONTEND_URL="http://localhost:5563"
+
+# Opcionais: estes são os valores padrão
+LOGIN_LIMITE_TENTATIVAS=10
+LOGIN_JANELA_MINUTOS=15
+PORTA_RECOMENDACOES=3001
 ```
 
-Substitua o valor de `JWT_SECRET` por um segredo próprio e não envie o `.env` ao GitHub. Depois, crie e popule o banco e inicie a API:
+Prepare o banco e carregue os dados de exemplo, se desejar:
 
 ```bash
+cd backend
+npx prisma generate
 npx prisma migrate dev
 npx prisma db seed
+```
+
+### Inicialização
+
+Inicie cada processo em um terminal separado:
+
+```bash
+# Terminal 1: API
+cd backend
 npm run dev
 ```
 
-Com `PORTA="3000"`, a API ficará disponível em `http://localhost:3000`. Para verificar se está funcionando, acesse `http://localhost:3000/v1/saude`. Para executar os testes automatizados, use `npm test` dentro de `backend/`.
+```bash
+# Terminal 2: recomendações (opcional)
+cd backend
+npm run recomendacoes:dev
+```
 
-## Integrantes
+```bash
+# Terminal 3: interface
+cd frontend
+npm run dev
+```
 
-- Maria Paula De Carvalho Silva (Fullstack)
-- Aline Aparecida Da Silva (Backend)
-- Murillo Augusto Pereira De Araujo (Backend)
+A interface fica em `http://localhost:5563`; a API, em `http://localhost:3000`. Para executar os testes da API, use `npm test` dentro de `backend/`.
+
+Se a API estiver em outro endereço, crie `frontend/.env` e configure:
+
+```env
+VITE_API_URL=http://localhost:3000/v1
+```
+
+## Como usar
+
+Verifique se a API está ativa:
+
+```bash
+curl http://localhost:3000/v1/saude
+```
+
+Faça login para obter um token:
+
+```bash
+curl -X POST http://localhost:3000/v1/autenticacao/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"gestor@exemplo.com","senha":"sua-senha"}'
+```
+
+Use o token retornado para consultar eventos:
+
+```bash
+curl http://localhost:3000/v1/eventos \
+  -H "Authorization: Bearer SEU_TOKEN_JWT"
+```
+
+O serviço separado de recomendações, quando iniciado, atende gestores em `GET http://localhost:3001/v1/recomendacoes` com o mesmo cabeçalho de autorização.
+
+## Licença
+
+O pacote do backend declara a licença ISC em `backend/package.json`. Não há um arquivo de licença para o repositório completo.
