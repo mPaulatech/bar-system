@@ -1,4 +1,4 @@
-import type { DadosEstabelecimento, DadosEvento, DadosTipoIngresso, DadosVenda, Estabelecimento, Evento, RespostaEventos, RespostaVenda, TipoIngresso, UsuarioAutenticado } from '../tipos'
+import type { ClienteParaVenda, DadosEstabelecimento, DadosEvento, DadosTipoIngresso, DadosVenda, Estabelecimento, Evento, RespostaEventos, RespostaVenda, TipoIngresso, UsuarioAutenticado } from '../tipos'
 
 const enderecoApi = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/v1'
 
@@ -26,7 +26,22 @@ async function requisicaoApi<T>(rota: string, opcoes: RequestInit = {}): Promise
       ...opcoes.headers,
     },
   })
-  const corpo = await resposta.json() as T & { mensagem?: string }
+  const tipoConteudo = resposta.headers.get('content-type') ?? ''
+  if (!tipoConteudo.toLowerCase().includes('application/json')) {
+    const erro = new Error(
+      `A API retornou um formato inesperado (${tipoConteudo || 'sem Content-Type'}). Verifique se o backend está em execução e se a rota ${rota} está correta.`,
+    ) as Error & { status?: number }
+    erro.status = resposta.status
+    throw erro
+  }
+  let corpo: T & { mensagem?: string }
+  try {
+    corpo = await resposta.json() as T & { mensagem?: string }
+  } catch {
+    const erro = new Error('A API informou conteúdo JSON inválido.') as Error & { status?: number }
+    erro.status = resposta.status
+    throw erro
+  }
   if (!resposta.ok) {
     const erro = new Error(corpo.mensagem ?? 'NÃ£o foi possÃ­vel concluir a operaÃ§Ã£o.') as Error & { status?: number }
     erro.status = resposta.status
@@ -63,6 +78,10 @@ export function atualizarTipoIngresso(eventoId: number, id: number, dados: Parti
 
 export function venderIngresso(dados: DadosVenda): Promise<RespostaVenda> {
   return requisicaoApi<RespostaVenda>('/vendas-ingressos', { method: 'POST', body: JSON.stringify(dados) })
+}
+
+export function obterClienteParaVenda(cpf: string): Promise<ClienteParaVenda> {
+  return requisicaoApi<ClienteParaVenda>(`/clientes/cpf/${encodeURIComponent(cpf)}`)
 }
 
 export function obterEstabelecimento(): Promise<Estabelecimento> {
@@ -105,7 +124,18 @@ async function requisicaoAutenticacao<T>(rota: string, dados: Record<string, str
     throw new Error('NÃ£o foi possÃ­vel conectar Ã  API. Verifique se o backend estÃ¡ em execuÃ§Ã£o e se o frontend estÃ¡ em http://localhost:5563.')
   }
 
-  const corpo: { mensagem?: string } & T = await resposta.json()
+  const tipoConteudo = resposta.headers.get('content-type') ?? ''
+  if (!tipoConteudo.toLowerCase().includes('application/json')) {
+    throw new Error(
+      `A API de autenticação retornou um formato inesperado (${tipoConteudo || 'sem Content-Type'}).`,
+    )
+  }
+  let corpo: { mensagem?: string } & T
+  try {
+    corpo = await resposta.json()
+  } catch {
+    throw new Error('A API de autenticação informou conteúdo JSON inválido.')
+  }
   if (!resposta.ok) throw new Error(corpo.mensagem ?? 'NÃ£o foi possÃ­vel concluir a operaÃ§Ã£o.')
   return corpo
 }

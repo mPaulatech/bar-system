@@ -11,6 +11,7 @@ import { criarRotasEventos } from './modulos/eventos/eventos.rotas.js';
 import { criarRotasIngressosTipos } from './modulos/ingressos-tipos/ingressos-tipos.rotas.js';
 import { criarRotasEstabelecimento } from './modulos/estabelecimento/estabelecimento.rotas.js';
 import { criarRotasVendasIngressos } from './modulos/vendas-ingressos/vendas-ingressos.rotas.js';
+import { criarRotasClientes } from './modulos/clientes/clientes.rotas.js';
 
 /**
  * Monta a aplicação Express com os middlewares e as rotas iniciais.
@@ -52,6 +53,7 @@ export function criarAplicacao(configuracao, dependencias = {}) {
   aplicacao.use('/v1/eventos', criarRotasEventos({ prisma }));
   aplicacao.use('/v1/eventos', criarRotasIngressosTipos({ prisma }));
   aplicacao.use('/v1/estabelecimento', criarRotasEstabelecimento({ prisma }));
+  aplicacao.use('/v1/clientes', criarRotasClientes({ prisma }));
   aplicacao.use('/v1/vendas-ingressos', criarRotasVendasIngressos({ prisma }));
   aplicacao.use(tratamentoErros);
 

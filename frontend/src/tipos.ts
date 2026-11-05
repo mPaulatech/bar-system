@@ -51,9 +51,16 @@ export type DadosVenda = {
   ingressoTipoId: number
   quantidade: number
   formaPagamento: FormaPagamento
-  clienteId?: number
-  cpf?: string
-  nomeCliente?: string
+  cpf: string
+  nomeCliente: string
+  emailCliente: string
+}
+
+export type ClienteParaVenda = {
+  id: number
+  nome: string
+  cpf: string
+  email: string
 }
 
 export type Venda = {

@@ -14,7 +14,7 @@ const selecaoVenda = {
   estornadaEm: true,
   evento: { select: { id: true, nome: true, dataHora: true, status: true } },
   ingressoTipo: { select: { id: true, nome: true, preco: true } },
-  cliente: { select: { id: true, nome: true, cpf: true } },
+  cliente: { select: { id: true, nome: true, cpf: true, email: true } },
   vendedor: { select: { id: true, nome: true } },
 };
 
@@ -23,29 +23,31 @@ function gerarCodigo() {
 }
 
 async function obterCliente(transacao, estabelecimentoId, dados) {
-  if (!dados.clienteId && !dados.cpf) return null;
-
-  if (dados.clienteId) {
-    const cliente = await transacao.cliente.findFirst({
-      where: { id: dados.clienteId, estabelecimentoId },
-    });
-    if (!cliente) throw erroHttp(404, 'Cliente não encontrado.');
-    return cliente;
-  }
-
   const cpf = dados.cpf;
   const existente = await transacao.cliente.findFirst({
     where: { estabelecimentoId, cpf },
   });
-  if (existente) return existente;
+  if (existente) {
+    if (existente.nome !== dados.nomeCliente || existente.email !== dados.emailCliente) {
+      throw erroHttp(409, 'Os dados enviados são diferentes do cadastro existente para este CPF.');
+    }
+    return existente;
+  }
 
   try {
     return await transacao.cliente.create({
-      data: { estabelecimentoId, cpf, nome: dados.nomeCliente ?? `Cliente ${cpf}` },
+      data: {
+        estabelecimentoId,
+        cpf,
+        nome: dados.nomeCliente,
+        email: dados.emailCliente,
+      },
     });
   } catch (erro) {
     if (erro?.code !== 'P2002') throw erro;
-    return transacao.cliente.findFirst({ where: { estabelecimentoId, cpf } });
+    const cliente = await transacao.cliente.findFirst({ where: { estabelecimentoId, cpf } });
+    if (!cliente) throw erroHttp(409, 'Não foi possível reutilizar o cliente informado.');
+    return cliente;
   }
 }
 
@@ -111,7 +113,7 @@ export async function criarVendaIngresso(prisma, estabelecimentoId, usuarioVende
             estabelecimentoId,
             eventoId: evento.id,
             ingressoTipoId: tipo.id,
-            clienteId: cliente?.id,
+            clienteId: cliente.id,
             usuarioVendedorId,
             valorPago: tipo.preco,
             formaPagamento: dados.formaPagamento,

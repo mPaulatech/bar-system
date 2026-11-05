@@ -126,6 +126,9 @@ test('venda com várias unidades baixa o estoque uma vez e retorna cada ingresso
       body: {
         eventoId: 1, ingressoTipoId: 1, quantidade: 3,
         formaPagamento: 'PIX',
+        nomeCliente: 'Cliente de teste',
+        cpf: '529.982.247-25',
+        emailCliente: 'cliente@exemplo.com',
       },
     });
     const corpo = await resposta.json();
@@ -149,6 +152,9 @@ test('estoque insuficiente não cria nenhuma venda', async () => {
     body: {
       eventoId: 1, ingressoTipoId: 1, quantidade: 2,
       formaPagamento: 'DINHEIRO',
+      nomeCliente: 'Cliente de teste',
+      cpf: '529.982.247-25',
+      emailCliente: 'cliente@exemplo.com',
     },
   });
   assert.equal(resposta.status, 409);
@@ -169,6 +175,9 @@ test('concorrência pelos últimos ingressos não deixa estoque negativo', async
         body: {
           eventoId: 1, ingressoTipoId: 1, quantidade: 1,
           formaPagamento: 'CARTAO_DEBITO',
+          nomeCliente: 'Cliente de teste',
+          cpf: '529.982.247-25',
+          emailCliente: 'cliente@exemplo.com',
         },
       })),
     );
@@ -190,6 +199,9 @@ test('estorno devolve uma unidade e não pode ser realizado duas vezes', async (
     body: {
       eventoId: 1, ingressoTipoId: 1, quantidade: 1,
       formaPagamento: 'PIX',
+      nomeCliente: 'Cliente de teste',
+      cpf: '529.982.247-25',
+      emailCliente: 'cliente@exemplo.com',
     },
   });
   const vendaCriada = await venda.json();
@@ -225,8 +237,9 @@ test('falha durante a venda desfaz a reserva e o cliente criado', async () => {
     body: {
       eventoId: 1, ingressoTipoId: 1, quantidade: 2,
       formaPagamento: 'DINHEIRO',
-      cpf: '12345678901',
+      cpf: '529.982.247-25',
       nomeCliente: 'Cliente de teste',
+      emailCliente: 'cliente@exemplo.com',
     },
   });
 
@@ -234,6 +247,58 @@ test('falha durante a venda desfaz a reserva e o cliente criado', async () => {
   assert.equal(prisma.tipos[0].quantidadeDisponivel, 2);
   assert.equal(prisma.vendas.length, 0);
   assert.equal(prisma.clientes.length, 0);
+});
+
+test('rejeita venda sem identificação, inclusive na portaria', async () => {
+  const prisma = new PrismaFake();
+  const aplicacao = criarAplicacao(configuracao, { prisma });
+
+  const resposta = await requisitarEmAplicacao(aplicacao, '/v1/vendas-ingressos', {
+    method: 'POST',
+    body: {
+      eventoId: 1, ingressoTipoId: 1, quantidade: 1,
+      formaPagamento: 'PIX',
+    },
+  });
+
+  assert.equal(resposta.status, 400);
+  assert.equal(prisma.vendas.length, 0);
+  assert.equal(prisma.clientes.length, 0);
+});
+
+test('reutiliza cliente pelo CPF, cria outro e rejeita dados divergentes', async () => {
+  const prisma = new PrismaFake();
+  prisma.tipos[0].quantidadeDisponivel = 4;
+  const aplicacao = criarAplicacao(configuracao, { prisma });
+  const dados = {
+    eventoId: 1, ingressoTipoId: 1, quantidade: 1,
+    formaPagamento: 'PIX',
+    nomeCliente: 'Cliente de teste',
+    cpf: '529.982.247-25',
+    emailCliente: 'cliente@exemplo.com',
+  };
+
+  assert.equal((await requisitarEmAplicacao(aplicacao, '/v1/vendas-ingressos', {
+    method: 'POST', body: dados,
+  })).status, 201);
+  assert.equal((await requisitarEmAplicacao(aplicacao, '/v1/vendas-ingressos', {
+    method: 'POST', body: dados,
+  })).status, 201);
+  assert.equal(prisma.clientes.length, 1);
+
+  const novoCliente = await requisitarEmAplicacao(aplicacao, '/v1/vendas-ingressos', {
+    method: 'POST',
+    body: { ...dados, cpf: '111.444.777-35', emailCliente: 'outro@exemplo.com' },
+  });
+  assert.equal(novoCliente.status, 201);
+  assert.equal(prisma.clientes.length, 2);
+
+  const divergente = await requisitarEmAplicacao(aplicacao, '/v1/vendas-ingressos', {
+    method: 'POST',
+    body: { ...dados, nomeCliente: 'Outro nome' },
+  });
+  assert.equal(divergente.status, 409);
+  assert.equal(prisma.clientes[0].nome, 'Cliente de teste');
 });
 
 async function requisitarEmAplicacao(aplicacao, caminho, opcoes) {
