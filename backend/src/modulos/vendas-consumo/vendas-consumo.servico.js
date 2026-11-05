@@ -16,6 +16,18 @@ function formatarVendaConsumo(venda) {
   return { ...venda, valorTotal: new Prisma.Decimal(venda.valorTotal).toFixed(2) };
 }
 
+async function buscarVendaExistente(transacao, estabelecimentoId, idTransacaoExterna) {
+  return transacao.vendaConsumoApi.findUnique({
+    where: {
+      estabelecimentoId_idTransacaoExterna: {
+        estabelecimentoId,
+        idTransacaoExterna,
+      },
+    },
+    select: selecaoVendaConsumo,
+  });
+}
+
 async function identificarEvento(transacao, estabelecimentoId, dados) {
   if (dados.eventoId) {
     const evento = await transacao.evento.findFirst({
@@ -45,6 +57,38 @@ async function identificarEvento(transacao, estabelecimentoId, dados) {
   return eventosCorrespondentes.length === 1 ? eventosCorrespondentes[0].id : null;
 }
 
+async function criarVendaConsumo(transacao, estabelecimentoId, dados) {
+  if (dados.clienteId) {
+    const cliente = await transacao.cliente.findFirst({
+      where: { id: dados.clienteId, estabelecimentoId },
+      select: { id: true },
+    });
+    if (!cliente) throw erroHttp(404, 'Cliente não encontrado.');
+  }
+
+  const eventoId = await identificarEvento(transacao, estabelecimentoId, dados);
+  return transacao.vendaConsumoApi.create({
+    data: {
+      estabelecimentoId,
+      eventoId,
+      clienteId: dados.clienteId ?? null,
+      idTransacaoExterna: dados.idTransacaoExterna,
+      valorTotal: new Prisma.Decimal(dados.valorTotal),
+      dataHoraTransacao: dados.dataHoraTransacao,
+      itens: dados.itens,
+      payloadOriginal: {
+        idTransacaoExterna: dados.idTransacaoExterna,
+        valorTotal: String(dados.valorTotal),
+        dataHoraTransacao: dados.dataHoraTransacao.toISOString(),
+        ...(dados.eventoId ? { eventoId: dados.eventoId } : {}),
+        ...(dados.clienteId ? { clienteId: dados.clienteId } : {}),
+        ...(dados.itens === undefined ? {} : { itens: dados.itens }),
+      },
+    },
+    select: selecaoVendaConsumo,
+  });
+}
+
 /**
  * Registra uma venda externa, sem exigir cliente, e associa evento manual ou automaticamente.
  * @param {import('@prisma/client').PrismaClient} prisma Acesso ao banco.
@@ -55,50 +99,75 @@ async function identificarEvento(transacao, estabelecimentoId, dados) {
 export async function receberVendaConsumo(prisma, estabelecimentoId, dados) {
   try {
     return await prisma.$transaction(async (transacao) => {
-      if (dados.clienteId) {
-        const cliente = await transacao.cliente.findFirst({
-          where: { id: dados.clienteId, estabelecimentoId },
-          select: { id: true },
-        });
-        if (!cliente) throw erroHttp(404, 'Cliente não encontrado.');
-      }
+      const vendaExistente = await buscarVendaExistente(
+        transacao,
+        estabelecimentoId,
+        dados.idTransacaoExterna,
+      );
+      if (vendaExistente) return { venda: formatarVendaConsumo(vendaExistente), criada: false };
 
-      const eventoId = await identificarEvento(transacao, estabelecimentoId, dados);
-      const venda = await transacao.vendaConsumoApi.create({
-        data: {
-          estabelecimentoId,
-          eventoId,
-          clienteId: dados.clienteId ?? null,
-          idTransacaoExterna: dados.idTransacaoExterna,
-          valorTotal: new Prisma.Decimal(dados.valorTotal),
-          dataHoraTransacao: dados.dataHoraTransacao,
-          itens: dados.itens,
-          payloadOriginal: {
-            idTransacaoExterna: dados.idTransacaoExterna,
-            valorTotal: String(dados.valorTotal),
-            dataHoraTransacao: dados.dataHoraTransacao.toISOString(),
-            ...(dados.eventoId ? { eventoId: dados.eventoId } : {}),
-            ...(dados.clienteId ? { clienteId: dados.clienteId } : {}),
-            ...(dados.itens === undefined ? {} : { itens: dados.itens }),
-          },
-        },
-        select: selecaoVendaConsumo,
-      });
+      const venda = await criarVendaConsumo(transacao, estabelecimentoId, dados);
       return { venda: formatarVendaConsumo(venda), criada: true };
     });
   } catch (erro) {
     if (erro?.code !== 'P2002') throw erro;
-    const vendaExistente = await prisma.vendaConsumoApi.findUnique({
-      where: {
-        estabelecimentoId_idTransacaoExterna: {
-          estabelecimentoId,
-          idTransacaoExterna: dados.idTransacaoExterna,
-        },
-      },
-      select: selecaoVendaConsumo,
-    });
+    const vendaExistente = await buscarVendaExistente(
+      prisma,
+      estabelecimentoId,
+      dados.idTransacaoExterna,
+    );
     if (!vendaExistente) throw erro;
     return { venda: formatarVendaConsumo(vendaExistente), criada: false };
+  }
+}
+
+/**
+ * Registra um lote inteiro em uma única transação, sem deixar gravações parciais.
+ * @param {import('@prisma/client').PrismaClient} prisma Acesso ao banco.
+ * @param {number} estabelecimentoId Estabelecimento autenticado.
+ * @param {object[]} vendas Vendas validadas a importar.
+ * @returns {Promise<object>} Resultado de cada venda após a conclusão do lote.
+ */
+export async function receberLoteVendasConsumo(prisma, estabelecimentoId, vendas) {
+  try {
+    const resultados = await prisma.$transaction(async (transacao) => {
+      const itens = [];
+      for (const dados of vendas) {
+        const vendaExistente = await buscarVendaExistente(
+          transacao,
+          estabelecimentoId,
+          dados.idTransacaoExterna,
+        );
+        if (vendaExistente) {
+          itens.push({ venda: formatarVendaConsumo(vendaExistente), criada: false });
+          continue;
+        }
+
+        const venda = await criarVendaConsumo(transacao, estabelecimentoId, dados);
+        itens.push({ venda: formatarVendaConsumo(venda), criada: true });
+      }
+      return itens;
+    }, { timeout: 30000 });
+
+    const criadas = resultados.filter((resultado) => resultado.criada).length;
+    return {
+      total: resultados.length,
+      criadas,
+      repetidas: resultados.length - criadas,
+      resultados: resultados.map(({ venda, criada }) => ({
+        idTransacaoExterna: venda.idTransacaoExterna,
+        situacao: criada ? 'IMPORTADA' : 'JA_EXISTIA',
+        venda,
+      })),
+    };
+  } catch (erro) {
+    if (erro?.code === 'P2002') {
+      throw erroHttp(
+        409,
+        'O lote não foi importado porque uma transação foi recebida ao mesmo tempo. Tente novamente.',
+      );
+    }
+    throw erro;
   }
 }
 

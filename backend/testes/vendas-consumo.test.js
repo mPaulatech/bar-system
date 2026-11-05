@@ -99,7 +99,13 @@ class PrismaFake {
   }
 
   async $transaction(callback) {
-    return callback(this);
+    const vendasAnteriores = [...this.vendasConsumo];
+    try {
+      return await callback(this);
+    } catch (erro) {
+      this.vendasConsumo = vendasAnteriores;
+      throw erro;
+    }
   }
 }
 
@@ -232,4 +238,123 @@ test('exige API Key válida e valida os dados recebidos', async () => {
     body: JSON.stringify(vendaConsumo('venda-invalida', { valorTotal: '-1' })),
   });
   assert.equal(dadosInvalidos.status, 400);
+});
+
+test('recebe lote com idempotência e reverte tudo se uma venda for inválida', async () => {
+  const prisma = new PrismaFake();
+  const aplicacao = criarAplicacao(configuracao, { prisma });
+
+  const inicial = await requisitar(aplicacao, '/v1/integracoes/consumo', {
+    method: 'POST',
+    headers: { 'x-api-key': apiKey },
+    body: JSON.stringify(vendaConsumo('venda-existente')),
+  });
+  assert.equal(inicial.status, 201);
+
+  const lote = await requisitar(aplicacao, '/v1/integracoes/consumo/lote', {
+    method: 'POST',
+    headers: { 'x-api-key': apiKey },
+    body: JSON.stringify({
+      vendas: [
+        vendaConsumo('venda-existente'),
+        vendaConsumo('venda-nova'),
+      ],
+    }),
+  });
+  assert.equal(lote.status, 201);
+  assert.deepEqual(
+    ((await lote.json()).resultados).map((resultado) => resultado.situacao),
+    ['JA_EXISTIA', 'IMPORTADA'],
+  );
+  assert.equal(prisma.vendasConsumo.length, 2);
+
+  const loteInvalido = await requisitar(aplicacao, '/v1/integracoes/consumo/lote', {
+    method: 'POST',
+    headers: { 'x-api-key': apiKey },
+    body: JSON.stringify({
+      vendas: [
+        vendaConsumo('venda-que-seria-revertida'),
+        vendaConsumo('venda-com-evento-de-outra-casa', { eventoId: 3 }),
+      ],
+    }),
+  });
+  assert.equal(loteInvalido.status, 404);
+  assert.equal(prisma.vendasConsumo.length, 2);
+});
+
+test('gestor importa CSV de forma atomica e funcionário não pode importar', async () => {
+  const prisma = new PrismaFake();
+  const aplicacao = criarAplicacao(configuracao, { prisma });
+  const csv = [
+    'idTransacaoExterna,valorTotal,dataHoraTransacao,eventoId,clienteId,itens',
+    'csv-valida,12.50,2026-11-05T23:00:00Z,,,"[{""nome"":""Cerveja"",""quantidade"":2}]"',
+    'csv-invalida,8.00,2026-11-05T23:00:00Z,3,,',
+  ].join('\n');
+
+  const resposta = await requisitar(aplicacao, '/v1/vendas-consumo/importacao', {
+    method: 'POST',
+    headers: {
+      authorization: `Bearer ${token()}`,
+      'content-type': 'text/csv',
+    },
+    body: csv,
+  });
+  assert.equal(resposta.status, 404);
+  assert.equal(prisma.vendasConsumo.length, 0);
+
+  const csvValido = [
+    'idTransacaoExterna,valorTotal,dataHoraTransacao,itens',
+    'csv-valida,12.50,2026-11-05T23:00:00Z,"[{""nome"":""Cerveja"",""quantidade"":2}]"',
+  ].join('\n');
+  const importacao = await requisitar(aplicacao, '/v1/vendas-consumo/importacao', {
+    method: 'POST',
+    headers: {
+      authorization: `Bearer ${token()}`,
+      'content-type': 'text/csv',
+    },
+    body: csvValido,
+  });
+  assert.equal(importacao.status, 201);
+  assert.equal((await importacao.json()).criadas, 1);
+  assert.equal(prisma.vendasConsumo[0].itens[0].nome, 'Cerveja');
+
+  const jsonImportado = await requisitar(aplicacao, '/v1/vendas-consumo/importacao', {
+    method: 'POST',
+    headers: { authorization: `Bearer ${token()}` },
+    body: JSON.stringify({
+      vendas: [vendaConsumo('json-importada')],
+    }),
+  });
+  assert.equal(jsonImportado.status, 201);
+  assert.equal((await jsonImportado.json()).criadas, 1);
+  assert.equal(prisma.vendasConsumo.length, 2);
+
+  const funcionario = await requisitar(aplicacao, '/v1/vendas-consumo/importacao', {
+    method: 'POST',
+    headers: {
+      authorization: `Bearer ${token('FUNCIONARIO')}`,
+      'content-type': 'text/csv',
+    },
+    body: csvValido,
+  });
+  assert.equal(funcionario.status, 403);
+  assert.equal(prisma.vendasConsumo.length, 2);
+});
+
+test('rejeita identificador de transação repetido no mesmo lote', async () => {
+  const prisma = new PrismaFake();
+  const aplicacao = criarAplicacao(configuracao, { prisma });
+  const resposta = await requisitar(aplicacao, '/v1/integracoes/consumo/lote', {
+    method: 'POST',
+    headers: { 'x-api-key': apiKey },
+    body: JSON.stringify({
+      vendas: [
+        vendaConsumo('repetida-no-lote'),
+        vendaConsumo('repetida-no-lote'),
+      ],
+    }),
+  });
+
+  assert.equal(resposta.status, 400);
+  assert.equal(prisma.vendasConsumo.length, 0);
 });
