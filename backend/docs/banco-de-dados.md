@@ -168,6 +168,7 @@ Todas as tabelas de negócio também ligam ao `ESTABELECIMENTOS` pela coluna `es
 - **Sem QR Code:** cada ingresso tem um `codigo_ingresso` curto e aleatório (8 caracteres). A portaria digita esse código no check-in, ou busca o cliente por CPF ou nome.
 - **Índices** começando por `estabelecimento_id`: quase toda consulta do sistema filtra por ele, então o banco já fica rápido onde mais importa.
 - **Nomes em português no código, snake_case no banco**: o `@map` e o `@@map` fazem o Prisma traduzir `estabelecimentoId` (código) para `estabelecimento_id` (coluna), como no seu diagrama.
+- **Vínculo de consumo ao evento:** a integração aceita o `evento_id` indicado pelo PDV ou procura um evento pela data/hora da venda, dentro da duração configurada. Se nenhum evento ou mais de um evento corresponder, o consumo permanece sem evento para não atribuir faturamento incorretamente.
 
 ### O que ficou de fora de propósito (MVP)
 - **Tabela de campanhas/promoções:** o sistema segmenta o público e entrega a lista de quem receber a ação. O envio em si (e-mail, WhatsApp) fica para uma versão futura.
