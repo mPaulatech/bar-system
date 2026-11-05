@@ -315,6 +315,13 @@ td { height: 3.5625rem; padding: 0.4375rem 0.6875rem; color: #d9d7da; border-top
 .integracao-chave-nova > div { display: flex; align-items: center; gap: 0.375rem; }
 .integracao-chave-nova input { flex: 1; min-width: 0; height: 2.25rem; padding: 0 0.5625rem; color: #efedef; background: #17181a; border: 0.0625rem solid #393a3f; border-radius: 0.25rem; font-family: monospace; font-size: 0.5625rem; }
 .acoes-integracao { display: flex; justify-content: flex-end; margin-top: 0.875rem; }
+.painel-importacao-consumo { margin-top: 0.875rem; }
+.painel-importacao-consumo .campo-modal input { width: 100%; height: auto; min-height: 2.4375rem; padding: 0.5rem; }
+.importacao-resultado { margin-top: 0.75rem; padding: 0.75rem; color: #c4e5d9; background: #243a34; border: 0.0625rem solid #396052; border-radius: 0.3125rem; font-size: 0.625rem; }
+.importacao-resultado > p { display: flex; align-items: center; gap: 0.375rem; }
+.importacao-resultado ul { display: grid; gap: 0.375rem; max-height: 10rem; margin: 0.625rem 0 0; padding: 0; overflow-y: auto; list-style: none; }
+.importacao-resultado li { display: flex; justify-content: space-between; gap: 0.75rem; color: #d7d5d8; }
+.importacao-resultado code { overflow-wrap: anywhere; }
 .painel-consumo-evento { margin-top: 0.875rem; overflow: hidden; }
 .painel-consumo-evento .cabecalho-eventos { align-items: center; }
 .consumo-indicadores { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.625rem; padding: 0.75rem 1.125rem; }

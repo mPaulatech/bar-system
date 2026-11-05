@@ -101,3 +101,17 @@ export type ApiKeyEstabelecimento = {
   apiKey: string
   apiKeyPrefixo: string
 }
+
+export type ResultadoImportacaoConsumo = {
+  total: number
+  criadas: number
+  repetidas: number
+  resultados: {
+    idTransacaoExterna: string
+    situacao: 'IMPORTADA' | 'JA_EXISTIA'
+    venda: {
+      id: number
+      valorTotal: string
+    }
+  }[]
+}

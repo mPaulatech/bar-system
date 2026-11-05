@@ -1,4 +1,4 @@
-import type { ApiKeyEstabelecimento, DadosEstabelecimento, DadosEvento, DadosTipoIngresso, DadosVenda, Estabelecimento, Evento, RespostaEventos, RespostaVenda, ResumoConsumoEvento, TipoIngresso, UsuarioAutenticado } from '../tipos'
+import type { ApiKeyEstabelecimento, DadosEstabelecimento, DadosEvento, DadosTipoIngresso, DadosVenda, Estabelecimento, Evento, RespostaEventos, RespostaVenda, ResultadoImportacaoConsumo, ResumoConsumoEvento, TipoIngresso, UsuarioAutenticado } from '../tipos'
 
 const enderecoApi = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/v1'
 
@@ -78,6 +78,46 @@ export function atualizarEstabelecimento(dados: DadosEstabelecimento): Promise<E
 
 export function gerarApiKeyEstabelecimento(): Promise<ApiKeyEstabelecimento> {
   return requisicaoApi<ApiKeyEstabelecimento>('/estabelecimento/api-key', { method: 'POST' })
+}
+
+export async function importarVendasConsumo(arquivo: File): Promise<ResultadoImportacaoConsumo> {
+  if (arquivo.size > 1024 * 1024) {
+    throw new Error('O arquivo deve ter no máximo 1 MB.')
+  }
+
+  const extensao = arquivo.name.split('.').pop()?.toLowerCase()
+  if (extensao === 'csv') {
+    return requisicaoApi<ResultadoImportacaoConsumo>('/vendas-consumo/importacao', {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/csv' },
+      body: await arquivo.text(),
+    })
+  }
+
+  if (extensao !== 'json') {
+    throw new Error('Selecione um arquivo CSV ou JSON.')
+  }
+
+  let dados: unknown
+  try {
+    dados = JSON.parse((await arquivo.text()).replace(/^\uFEFF/, ''))
+  } catch {
+    throw new Error('O arquivo JSON não contém um JSON válido.')
+  }
+
+  if (
+    typeof dados !== 'object'
+    || dados === null
+    || !('vendas' in dados)
+    || !Array.isArray(dados.vendas)
+  ) {
+    throw new Error('O JSON deve conter uma lista de vendas no campo "vendas".')
+  }
+
+  return requisicaoApi<ResultadoImportacaoConsumo>('/vendas-consumo/importacao', {
+    method: 'POST',
+    body: JSON.stringify(dados),
+  })
 }
 
 export function obterResumoConsumoEvento(eventoId: number): Promise<ResumoConsumoEvento> {
