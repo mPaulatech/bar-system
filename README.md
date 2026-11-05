@@ -1,4 +1,4 @@
-# Dona Bier — Gestão de eventos e ingressos
+# BACKSTAGE — Gestão de eventos e ingressos
 
 Projeto acadêmico da Fatec Guaratinguetá para gerenciar estabelecimentos, eventos e vendas de ingressos. Inclui uma interface web, uma API e um serviço separado de recomendações para gestores.
 
