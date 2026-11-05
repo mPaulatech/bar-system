@@ -65,14 +65,17 @@ LOGIN_JANELA_MINUTOS=15
 PORTA_RECOMENDACOES=3001
 ```
 
-Prepare o banco e carregue os dados de exemplo, se desejar:
+Prepare o banco:
 
 ```bash
 cd backend
 npx prisma generate
 npx prisma migrate dev
-npx prisma db seed
 ```
+
+O projeto não carrega eventos ou outros dados fictícios automaticamente. Cadastre
+o estabelecimento e o gestor reais pela rota `POST /v1/autenticacao/registro-estabelecimento`;
+depois, o gestor poderá cadastrar os eventos e os demais dados pela API.
 
 ### Inicialização
 

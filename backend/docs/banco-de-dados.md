@@ -194,9 +194,9 @@ Você precisa de um **PostgreSQL** acessível pela sua API. Para um projeto acad
 ### Minha recomendação
 1. **Desenvolvimento:** Neon (um projeto chamado `dona-bier-dev`), ou PostgreSQL local se você preferir trabalhar offline.
 2. **Testes automáticos:** um segundo projeto no Neon (`dona-bier-teste`), para os testes nunca mexerem nos dados que você usa para desenvolver.
-3. **Apresentação:** o mesmo Neon do desenvolvimento, com o seed carregado.
+3. **Apresentação:** use um estabelecimento e dados reais cadastrados pela API.
 
-Se o grupo trabalha em várias pessoas, usem **um banco Neon em comum** (cada um com a mesma `DATABASE_URL` no seu `.env`) ou, melhor, **cada um com o seu** e todo mundo roda o mesmo `seed`. Assim ninguém atrapalha o outro.
+Se o grupo trabalha em várias pessoas, usem **um banco Neon em comum** (cada um com a mesma `DATABASE_URL` no seu `.env`) ou, melhor, **cada um com o seu**. Assim ninguém atrapalha o outro.
 
 ---
 
@@ -220,10 +220,9 @@ Se o grupo trabalha em várias pessoas, usem **um banco Neon em comum** (cada um
    npx prisma validate          # confere se o schema está correto
    npx prisma format            # organiza a formatação
    npx prisma migrate dev --name inicial   # cria as tabelas no banco
-   npx prisma db seed           # popula com dados de exemplo (depois da etapa 2 do roteiro)
    npx prisma studio            # abre uma interface no navegador para ver as tabelas
    ```
-8. No painel do Neon, aba **Tables**, as tabelas devem aparecer. Compare com o diagrama da seção 1.
+8. No painel do Neon, aba **Tables**, as tabelas devem aparecer. Compare com o diagrama da seção 1. O banco inicia sem eventos ou dados de demonstração; registre o estabelecimento e o gestor pela rota `POST /v1/autenticacao/registro-estabelecimento`.
 
 ### Alternativa: PostgreSQL local
 1. Instale o PostgreSQL pelo instalador oficial (postgresql.org/download) e guarde a senha do usuário `postgres`.
@@ -252,7 +251,7 @@ Se o grupo trabalha em várias pessoas, usem **um banco Neon em comum** (cada um
 ## 6. Cuidados com os dados
 
 - **Nunca** coloque a `DATABASE_URL` no código, no README ou em print. Se vazar, troque a senha no painel do Neon e atualize o `.env`.
-- Use **dados fictícios** no seed e nos testes. CPF de gente real é dado pessoal (LGPD).
+- Os testes usam dados fictícios isolados em memória. Não use dados pessoais reais nos testes; CPF é dado pessoal (LGPD).
 - Gere CPFs de teste válidos com um gerador online, em vez de usar o seu ou o de conhecidos.
 - Planos gratuitos têm backup limitado. Antes de uma entrega importante, exporte uma cópia: `pg_dump "SUA_DATABASE_URL" > backup.sql`.
 - **Antes da apresentação**, acesse a API uma vez (`GET /v1/saude` e uma rota que consulte o banco) para o banco estar "acordado" quando a banca olhar.

@@ -43,7 +43,6 @@ dona-bier/
 backend/
   prisma/
     schema.prisma
-    seed.js
   src/
     app.js                  # monta o Express (middlewares e rotas)
     servidor.js             # sobe o servidor
