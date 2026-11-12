@@ -12,6 +12,7 @@ const selecaoVenda = {
   statusCheckin: true,
   criadoEm: true,
   estornadaEm: true,
+  compra: { select: { id: true, origem: true, statusPagamento: true } },
   evento: { select: { id: true, nome: true, dataHora: true, status: true } },
   ingressoTipo: { select: { id: true, nome: true, preco: true } },
   cliente: { select: { id: true, nome: true, cpf: true, email: true } },
@@ -31,6 +32,12 @@ async function obterCliente(transacao, estabelecimentoId, dados) {
     if (existente.nome !== dados.nomeCliente || existente.email !== dados.emailCliente) {
       throw erroHttp(409, 'Os dados enviados são diferentes do cadastro existente para este CPF.');
     }
+    if (dados.consentimentoMarketing && !existente.consentimentoMarketing) {
+      return transacao.cliente.update({
+        where: { id: existente.id },
+        data: { consentimentoMarketing: true },
+      });
+    }
     return existente;
   }
 
@@ -41,12 +48,16 @@ async function obterCliente(transacao, estabelecimentoId, dados) {
         cpf,
         nome: dados.nomeCliente,
         email: dados.emailCliente,
+        consentimentoMarketing: dados.consentimentoMarketing ?? false,
       },
     });
   } catch (erro) {
     if (erro?.code !== 'P2002') throw erro;
     const cliente = await transacao.cliente.findFirst({ where: { estabelecimentoId, cpf } });
     if (!cliente) throw erroHttp(409, 'Não foi possível reutilizar o cliente informado.');
+    if (cliente.nome !== dados.nomeCliente || cliente.email !== dados.emailCliente) {
+      throw erroHttp(409, 'Os dados enviados são diferentes do cadastro existente para este CPF.');
+    }
     return cliente;
   }
 }
@@ -65,17 +76,111 @@ async function criarComCodigoDisponivel(transacao, dados, tentativas = 5) {
   throw new Error('Não foi possível gerar código de ingresso.');
 }
 
-export async function criarVendaIngresso(prisma, estabelecimentoId, usuarioVendedorId, dados) {
+async function obterCompraIdempotente(transacao, estabelecimentoId, chaveIdempotencia) {
+  if (!chaveIdempotencia) return null;
+  return transacao.compra.findFirst({
+    where: { estabelecimentoId, chaveIdempotencia },
+    select: {
+      id: true,
+      estabelecimentoId: true,
+      cliente: { select: { id: true, cpf: true, nome: true, email: true } },
+      statusPagamento: true,
+      valorTotal: true,
+      vendasIngressos: {
+        select: { eventoId: true, ingressoTipoId: true },
+      },
+    },
+  });
+}
+
+function dadosDaCompraCorrespondem(compra, estabelecimentoId, dados) {
+  const vendas = compra.vendasIngressos ?? [];
+  return compra.estabelecimentoId === estabelecimentoId
+    && compra.cliente?.cpf === dados.cpf
+    && compra.cliente?.nome === dados.nomeCliente
+    && compra.cliente?.email === dados.emailCliente
+    && vendas.length === dados.quantidade
+    && vendas.every((venda) => (
+      venda.eventoId === dados.eventoId
+      && venda.ingressoTipoId === dados.ingressoTipoId
+    ));
+}
+
+async function obterVendasDaCompra(transacao, estabelecimentoId, compraId) {
+  return transacao.vendaIngresso.findMany({
+    where: { estabelecimentoId, compraId },
+    select: selecaoVenda,
+    orderBy: { id: 'asc' },
+  });
+}
+
+function resultadoDaCompra(compra, vendas, dados) {
+  return {
+    compraId: compra.id,
+    vendas,
+    quantidade: vendas.length,
+    valorTotal: compra.valorTotal,
+    ...(dados.formaPagamento ? { formaPagamento: dados.formaPagamento } : {}),
+    statusPagamento: compra.statusPagamento,
+    emailTransacionalSimulado: true,
+  };
+}
+
+async function reutilizarCompraIdempotente(transacao, estabelecimentoId, compra, dados) {
+  if (!dadosDaCompraCorrespondem(compra, estabelecimentoId, dados)) {
+    throw erroHttp(409, 'A chave de idempotência já foi utilizada com dados diferentes.');
+  }
+  const vendasExistentes = await obterVendasDaCompra(
+    transacao,
+    estabelecimentoId,
+    compra.id,
+  );
+  if (dados.consentimentoMarketing && compra.cliente?.id) {
+    await transacao.cliente.update({
+      where: { id: compra.cliente.id },
+      data: { consentimentoMarketing: true },
+    });
+  }
+  return resultadoDaCompra(compra, vendasExistentes, dados);
+}
+
+async function criarCompraIngresso(
+  prisma,
+  estabelecimentoId,
+  dados,
+  { origem, statusPagamento, usuarioVendedorId = null, exigirEventoAtivo = false },
+) {
   for (let tentativa = 0; tentativa < 5; tentativa += 1) {
     try {
       return await prisma.$transaction(async (transacao) => {
+        const compraExistente = await obterCompraIdempotente(
+          transacao,
+          estabelecimentoId,
+          dados.chaveIdempotencia,
+        );
+        if (compraExistente) {
+          return reutilizarCompraIdempotente(
+            transacao,
+            estabelecimentoId,
+            compraExistente,
+            dados,
+          );
+        }
+
         const evento = await transacao.evento.findFirst({
           where: { id: dados.eventoId, estabelecimentoId },
-          select: { id: true, status: true },
+          select: { id: true, status: true, dataHora: true, duracaoHoras: true },
         });
         if (!evento) throw erroHttp(404, 'Evento não encontrado.');
-        if (evento.status === 'ENCERRADO') {
+        if (evento.status === 'ENCERRADO' || (exigirEventoAtivo && evento.status !== 'ATIVO')) {
           throw erroHttp(409, 'Não é possível vender ingresso para evento encerrado.');
+        }
+        if (
+          exigirEventoAtivo
+          && new Date(evento.dataHora).getTime()
+            + evento.duracaoHoras * 60 * 60 * 1000 < Date.now()
+        ) {
+          throw erroHttp(409, 'Não é possível comprar ingresso para evento encerrado.');
         }
 
         const tipo = await transacao.ingressoTipo.findFirst({
@@ -107,24 +212,35 @@ export async function criarVendaIngresso(prisma, estabelecimentoId, usuarioVende
         }
 
         const cliente = await obterCliente(transacao, estabelecimentoId, dados);
+        const compra = await transacao.compra.create({
+          data: {
+            estabelecimentoId,
+            clienteId: cliente.id,
+            origem,
+            statusPagamento,
+            chaveIdempotencia: dados.chaveIdempotencia,
+            valorTotal: new Prisma.Decimal(tipo.preco).mul(dados.quantidade),
+          },
+          select: { id: true },
+        });
         const vendas = [];
         for (let indice = 0; indice < dados.quantidade; indice += 1) {
           vendas.push(await criarComCodigoDisponivel(transacao, {
             estabelecimentoId,
             eventoId: evento.id,
             ingressoTipoId: tipo.id,
+            compraId: compra.id,
             clienteId: cliente.id,
             usuarioVendedorId,
             valorPago: tipo.preco,
-            formaPagamento: dados.formaPagamento,
+            ...(dados.formaPagamento ? { formaPagamento: dados.formaPagamento } : {}),
           }));
         }
-        return {
+        return resultadoDaCompra(
+          { ...compra, statusPagamento, valorTotal: new Prisma.Decimal(tipo.preco).mul(dados.quantidade) },
           vendas,
-          quantidade: dados.quantidade,
-          valorTotal: new Prisma.Decimal(tipo.preco).mul(dados.quantidade),
-          formaPagamento: dados.formaPagamento,
-        };
+          dados,
+        );
       });
     } catch (erro) {
       if (erro?.code === 'P2002' && tentativa < 4) continue;
@@ -132,6 +248,38 @@ export async function criarVendaIngresso(prisma, estabelecimentoId, usuarioVende
     }
   }
   throw new Error('Não foi possível concluir a venda.');
+}
+
+export async function criarVendaIngresso(prisma, estabelecimentoId, usuarioVendedorId, dados) {
+  return criarCompraIngresso(prisma, estabelecimentoId, dados, {
+    origem: 'PDV',
+    statusPagamento: 'APROVADO',
+    usuarioVendedorId,
+  });
+}
+
+/**
+ * Cria uma compra pública com cliente, ingressos e estoque dentro da mesma transação.
+ * @param {object} prisma Cliente Prisma.
+ * @param {number} estabelecimentoId Estabelecimento identificado pela URL pública.
+ * @param {object} dados Dados validados da compra pública.
+ * @returns {Promise<object>} Compra criada ou compra já existente pela idempotência.
+ */
+export async function criarCompraPublica(prisma, estabelecimentoId, dados) {
+  if (dados.pagamentoSimulado === 'RECUSADO') {
+    throw erroHttp(402, 'O pagamento simulado foi recusado. Nenhum ingresso foi criado.');
+  }
+
+  return criarCompraIngresso(prisma, estabelecimentoId, {
+    ...dados,
+    nomeCliente: dados.nome,
+    emailCliente: dados.email,
+    consentimentoMarketing: dados.consentimentoMarketing,
+  }, {
+    origem: 'PUBLICA',
+    statusPagamento: 'APROVADO',
+    exigirEventoAtivo: true,
+  });
 }
 
 export async function obterVendaIngresso(prisma, estabelecimentoId, id) {

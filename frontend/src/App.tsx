@@ -4,6 +4,7 @@ import { Building2, CalendarDays, Headphones, LogOut, ShoppingCart } from 'lucid
 import PaginaEstabelecimento from './pages/Estabelecimento'
 import Eventos from './pages/Eventos'
 import Pdv from './pages/Pdv'
+import Publico from './pages/Publico'
 import { cadastrarCasa, entrar } from './servicos/index'
 import { entrar as entrarSessao, sair, type AppDispatch, type RootState } from './store'
 import './App.css'
@@ -43,6 +44,8 @@ function App() {
   window.onpopstate = () => setRota(window.location.pathname)
   if (rota === '/login') return <Acesso mensagemSucesso={mensagemSucesso} aoIniciarEnvio={() => setMensagemSucesso('')} />
   if (rota === '/cadastro') return <Acesso cadastro aoIniciarEnvio={() => setMensagemSucesso('')} aoCadastrar={() => { setMensagemSucesso('Cadastro realizado com sucesso. Você já pode entrar com o e-mail do gestor.'); window.history.pushState({}, '', '/login'); setRota('/login') }} />
+  const partesRotaPublica = rota.split('/')
+  if (partesRotaPublica[1] === 'publico') return <Publico identificadorPublico={partesRotaPublica.length === 3 ? partesRotaPublica[2] : ''} />
   if (!sessao.token) { window.history.replaceState({}, '', '/login'); return <Acesso aoIniciarEnvio={() => setMensagemSucesso('')} /> }
   const pdv = rota === '/pdv'
   const estabelecimento = rota === '/estabelecimento'

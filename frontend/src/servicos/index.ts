@@ -1,4 +1,4 @@
-import type { ClienteParaVenda, DadosEstabelecimento, DadosEvento, DadosTipoIngresso, DadosVenda, Estabelecimento, Evento, RespostaEventos, RespostaVenda, TipoIngresso, UsuarioAutenticado } from '../tipos'
+import type { ClienteParaVenda, DadosCompraPublica, DadosEstabelecimento, DadosEvento, DadosTipoIngresso, DadosVenda, Estabelecimento, EstabelecimentoPublico, Evento, EventoPublico, LoteIngressoPublico, RespostaCompraPublica, RespostaEventos, RespostaVenda, TipoIngresso, UsuarioAutenticado } from '../tipos'
 
 const enderecoApi = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/v1'
 
@@ -48,6 +48,69 @@ async function requisicaoApi<T>(rota: string, opcoes: RequestInit = {}): Promise
     throw erro
   }
   return corpo
+}
+
+async function requisicaoPublica<T>(rota: string, opcoes: RequestInit = {}): Promise<T> {
+  let resposta: Response
+  try {
+    resposta = await fetch(`${enderecoApi}${rota}`, {
+      ...opcoes,
+      headers: {
+        'Content-Type': 'application/json',
+        ...opcoes.headers,
+      },
+    })
+  } catch {
+    throw new Error('Não foi possível conectar à API. Verifique se o backend está em execução.')
+  }
+
+  const tipoConteudo = resposta.headers.get('content-type') ?? ''
+  if (!tipoConteudo.toLowerCase().includes('application/json')) {
+    const erro = new Error(
+      `A API retornou um formato inesperado (${tipoConteudo || 'sem Content-Type'}). Verifique se o backend está em execução.`,
+    ) as Error & { status?: number }
+    erro.status = resposta.status
+    throw erro
+  }
+
+  let corpo: T & { mensagem?: string }
+  try {
+    corpo = await resposta.json() as T & { mensagem?: string }
+  } catch {
+    const erro = new Error('A API informou conteúdo JSON inválido.') as Error & { status?: number }
+    erro.status = resposta.status
+    throw erro
+  }
+  if (!resposta.ok) {
+    const erro = new Error(corpo.mensagem ?? 'Não foi possível concluir a operação.') as Error & { status?: number }
+    erro.status = resposta.status
+    throw erro
+  }
+  return corpo
+}
+
+export function obterEstabelecimentoPublico(identificadorPublico: string): Promise<EstabelecimentoPublico> {
+  return requisicaoPublica<EstabelecimentoPublico>(`/publico/estabelecimentos/${encodeURIComponent(identificadorPublico)}`)
+}
+
+export function listarEventosPublicos(identificadorPublico: string): Promise<EventoPublico[]> {
+  return requisicaoPublica<EventoPublico[]>(`/publico/estabelecimentos/${encodeURIComponent(identificadorPublico)}/eventos`)
+}
+
+export function listarLotesPublicos(identificadorPublico: string, eventoId: number): Promise<LoteIngressoPublico[]> {
+  return requisicaoPublica<LoteIngressoPublico[]>(
+    `/publico/estabelecimentos/${encodeURIComponent(identificadorPublico)}/eventos/${eventoId}/lotes`,
+  )
+}
+
+export function criarCompraPublica(
+  identificadorPublico: string,
+  dados: DadosCompraPublica,
+): Promise<RespostaCompraPublica> {
+  return requisicaoPublica<RespostaCompraPublica>(
+    `/publico/estabelecimentos/${encodeURIComponent(identificadorPublico)}/compras`,
+    { method: 'POST', body: JSON.stringify(dados) },
+  )
 }
 
 export function listarEventos(filtros: { pagina?: number; limite?: number; nome?: string; status?: Evento['status']; generoMusical?: string; dataInicio?: string; dataFim?: string } = {}): Promise<RespostaEventos> {

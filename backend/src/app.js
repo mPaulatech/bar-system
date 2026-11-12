@@ -12,6 +12,7 @@ import { criarRotasIngressosTipos } from './modulos/ingressos-tipos/ingressos-ti
 import { criarRotasEstabelecimento } from './modulos/estabelecimento/estabelecimento.rotas.js';
 import { criarRotasVendasIngressos } from './modulos/vendas-ingressos/vendas-ingressos.rotas.js';
 import { criarRotasClientes } from './modulos/clientes/clientes.rotas.js';
+import { criarRotasConsultaPublica } from './modulos/consulta-publica/consulta-publica.rotas.js';
 
 /**
  * Monta a aplicação Express com os middlewares e as rotas iniciais.
@@ -36,6 +37,7 @@ export function criarAplicacao(configuracao, dependencias = {}) {
   });
 
   aplicacao.use('/v1/autenticacao', criarRotasAutenticacao({ prisma, configuracao: configuracaoCompleta }));
+  aplicacao.use('/v1/publico', criarRotasConsultaPublica({ prisma }));
   // O limitador geral fica depois das rotas públicas para nunca contar saúde,
   // registro ou login; o login possui um limitador próprio por IP.
   aplicacao.use(rateLimit({

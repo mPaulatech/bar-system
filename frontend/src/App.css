@@ -235,10 +235,12 @@ td { height: 3.5625rem; padding: 0.4375rem 0.6875rem; color: #d9d7da; border-top
 .pdv-dados-venda { display: flex; flex-direction: column; gap: 0.5625rem; padding-top: 0.75rem; border-top: 0.0625rem solid #2a2b2f; }
 .pdv-campo { display: flex; flex-direction: column; gap: 0.3125rem; color: #b8b7bc; font-size: 0.5625rem; }
 .pdv-campo input { width: 100%; height: 2.125rem; padding: 0 0.5625rem; color: #e5e3e6; background: #17181a; border: 0.0625rem solid #343539; border-radius: 0.25rem; font-size: 0.5625rem; }
-.pdv-controle-quantidade { display: grid; grid-template-columns: minmax(0, 1fr) 2rem 2rem; gap: 0.25rem; }
+.pdv-controle-quantidade { display: flex; align-items: center; justify-content: space-between; gap: 0.25rem; }
+.pdv-controle-quantidade > input { flex: 1 1 auto; min-width: 0; }
+.pdv-botoes-quantidade { display: flex; flex: 0 0 auto; gap: 0.25rem; }
 .pdv-controle-quantidade input { min-width: 0; border-radius: 0.25rem; text-align: center; -moz-appearance: textfield; }
 .pdv-controle-quantidade input::-webkit-outer-spin-button, .pdv-controle-quantidade input::-webkit-inner-spin-button { margin: 0; -webkit-appearance: none; }
-.pdv-controle-quantidade button { height: 2.125rem; color: #c9a49e; background: #292124; border: 0.0625rem solid #343539; cursor: pointer; font-size: 0.875rem; line-height: 1; }
+.pdv-controle-quantidade button { width: 2rem; height: 2.125rem; color: #c9a49e; background: #292124; border: 0.0625rem solid #343539; cursor: pointer; font-size: 0.875rem; line-height: 1; }
 .pdv-controle-quantidade button { border-radius: 0.25rem; }
 .pdv-controle-quantidade button:hover:not(:disabled) { color: #fff1ee; background: #382725; border-color: #704137; }
 .pdv-controle-quantidade button:disabled { color: #66676d; cursor: not-allowed; }
@@ -337,6 +339,65 @@ td { height: 3.5625rem; padding: 0.4375rem 0.6875rem; color: #d9d7da; border-top
 .orientacao-login { margin-bottom: 1.0625rem; color: var(--texto-suave); font-size: 0.625rem; line-height: 1.45; }
 .mensagem-erro { color: #f3c1ba; background: #422724; border: 0.0625rem solid #713d36; }
 .mensagem-sucesso { color: #c4e5d9; background: #243a34; border: 0.0625rem solid #396052; }
+.publico-pagina { display: flex; flex-direction: column; width: min(100% - 2rem, 42rem); min-height: 100vh; margin: 0 auto; padding: 2rem 0; }
+.publico-cabecalho { display: flex; align-items: center; justify-content: center; gap: 0.625rem; margin-bottom: 2rem; }
+.publico-painel { padding: 2.5rem 2rem; }
+.publico-estado { display: flex; align-items: center; justify-content: center; gap: 0.5625rem; min-height: 5rem; color: var(--texto-suave); font-size: 0.6875rem; }
+.publico-painel .mensagem-erro { margin-bottom: 0; }
+.publico-conteudo { text-align: center; }
+.publico-conteudo h1 { margin-top: 0.5rem; }
+.publico-secao { margin-top: 2rem; text-align: left; }
+.publico-secao-cabecalho { margin-bottom: 0.75rem; }
+.publico-secao-cabecalho h2 { margin-top: 0.3125rem; color: #f3f1f2; font-family: 'Barlow Condensed', sans-serif; font-size: 1.375rem; }
+.publico-eventos, .publico-lotes { display: grid; gap: 0.625rem; }
+.publico-evento { display: flex; flex-direction: column; align-items: flex-start; gap: 0.375rem; padding: 0.875rem 1rem; color: #cfced1; text-align: left; background: #202124; border: 0.0625rem solid #343539; border-radius: 0.375rem; cursor: pointer; transition: background 160ms ease, border-color 160ms ease, transform 160ms ease; }
+.publico-evento:hover, .publico-evento.selecionado { background: #292326; border-color: var(--coral); }
+.publico-evento:hover { transform: translateY(-0.0625rem); }
+.publico-evento strong { color: #f3f1f2; font-family: 'Barlow Condensed', sans-serif; font-size: 1.25rem; }
+.publico-evento-genero, .publico-evento-atracoes, .publico-evento-detalhe, .publico-lote span { color: var(--texto-suave); font-size: 0.625rem; }
+.publico-evento-genero { color: #f5b2a9; font-weight: 700; letter-spacing: 0.05rem; text-transform: uppercase; }
+.publico-evento-detalhe { display: flex; align-items: center; gap: 0.375rem; }
+.publico-evento-detalhe svg { color: var(--coral); }
+.publico-vazio { color: var(--texto-suave); font-size: 0.6875rem; }
+.publico-estado.menor { min-height: 3rem; justify-content: flex-start; }
+.publico-lote { display: flex; width: 100%; align-items: center; gap: 0.6875rem; padding: 0.75rem; color: inherit; text-align: left; background: #202124; border: 0.0625rem solid var(--borda); border-radius: 0.375rem; cursor: pointer; transition: background 160ms ease, border-color 160ms ease; }
+.publico-lote:hover, .publico-lote.selecionado { background: #292326; border-color: var(--coral); }
+.publico-lote-icone { display: grid; width: 2rem; height: 2rem; place-items: center; color: var(--coral) !important; background: #3a2827; border-radius: 0.3125rem; }
+.publico-lote div { display: flex; flex: 1; flex-direction: column; gap: 0.1875rem; }
+.publico-lote strong { color: #f3f1f2; font-size: 0.6875rem; }
+.publico-lote b { color: #f5b2a9; font-size: 0.75rem; }
+.publico-formulario { text-align: left; }
+.publico-campos { display: grid; gap: 0.75rem; }
+.publico-campos .campo-modal input { width: 100%; }
+.publico-resumo { display: grid; gap: 0.625rem; margin-top: 1rem; padding: 0.875rem; background: #202124; border: 0.0625rem solid var(--borda); border-radius: 0.375rem; }
+.publico-resumo-cabecalho { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
+.publico-resumo-cabecalho strong { color: #f3f1f2; font-size: 0.75rem; }
+.publico-quantidade, .publico-resumo-linha { display: flex; align-items: center; justify-content: space-between; gap: 0.625rem; color: var(--texto-suave); font-size: 0.6875rem; }
+.publico-controle-quantidade { display: flex; align-items: center; min-height: 2.25rem; overflow: hidden; background: #17181a; border: 0.0625rem solid #393a3f; border-radius: 0.375rem; }
+.publico-controle-quantidade button { display: grid; width: 2.25rem; height: 2.25rem; place-items: center; color: #f5b2a9; background: #3a2827; border: 0; cursor: pointer; transition: color 160ms ease, background 160ms ease; }
+.publico-controle-quantidade button:hover:not(:disabled) { color: #fff; background: var(--coral); }
+.publico-controle-quantidade button:focus-visible { position: relative; z-index: 1; outline: 0.125rem solid #f5b2a9; outline-offset: -0.125rem; }
+.publico-controle-quantidade button:disabled { color: #666269; background: #242326; cursor: not-allowed; }
+.publico-controle-quantidade span { display: grid; min-width: 2.5rem; height: 2.25rem; place-items: center; color: #f3f1f2; font-size: 0.8125rem; font-weight: 700; }
+.publico-quantidade small { margin-right: auto; font-size: 0.5625rem; }
+.publico-resumo-linha strong { color: #f3f1f2; }
+.publico-resumo-linha.total { padding-top: 0.625rem; border-top: 0.0625rem solid var(--borda); }
+.publico-resumo-linha.total strong { color: #f5b2a9; font-size: 1rem; }
+.publico-continuar { width: 100%; margin-top: 0.875rem; }
+.publico-revisao { display: grid; gap: 0.375rem; margin-top: 0.875rem; padding: 0.875rem; color: #c4e5d9; background: #243a34; border: 0.0625rem solid #396052; border-radius: 0.375rem; font-size: 0.6875rem; }
+.publico-revisao strong:last-child { color: #e0f3eb; font-size: 1rem; }
+.publico-consentimento { display: flex; align-items: flex-start; gap: 0.5rem; margin-top: 0.75rem; color: var(--texto-suave); font-size: 0.625rem; }
+.publico-consentimento input { margin-top: 0.05rem; accent-color: var(--coral); }
+.publico-aviso-simulacao, .publico-email-simulado { color: #e8c89f; font-size: 0.625rem; }
+.publico-confirmacao { display: grid; gap: 0.625rem; margin-top: 2rem; padding: 1.25rem; text-align: center; background: #243a34; border: 0.0625rem solid #396052; border-radius: 0.375rem; }
+.publico-confirmacao > svg { margin: 0 auto; color: #9bd5bd; }
+.publico-confirmacao h2 { margin: 0; color: #f3f1f2; font-family: 'Barlow Condensed', sans-serif; font-size: 1.5rem; }
+.publico-confirmacao-resumo { display: grid; gap: 0.375rem; text-align: left; }
+.publico-confirmacao-resumo p { display: flex; justify-content: space-between; gap: 0.75rem; margin: 0; color: var(--texto-suave); font-size: 0.6875rem; }
+.publico-confirmacao-resumo strong { color: #f3f1f2; text-align: right; }
+.publico-codigos { display: grid; gap: 0.375rem; padding-top: 0.75rem; border-top: 0.0625rem solid #396052; }
+.publico-codigos strong { padding: 0.5rem; color: #e0f3eb; letter-spacing: 0.12rem; background: #192b26; border-radius: 0.25rem; }
+
 .acesso-submit { width: 100%; height: 2.75rem; margin-top: 0.375rem; font-size: 0.6875rem; }
 .acesso-link { width: 100%; margin-top: 0.75rem; }
 .acesso-cadastro .acesso-painel { padding-block: 1.75rem 1.5625rem; }
