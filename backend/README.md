@@ -81,3 +81,19 @@ e os ingressos individuais com seus códigos, além de
 e o estabelecimento são definidos ou validados pelo backend. Use
 `pagamentoSimulado: "RECUSADO"` apenas para testar a falha acadêmica; nesse
 caso a API responde `402` e não cria compra, ingressos ou baixa estoque.
+
+## Check-in
+
+As rotas permitem a entrada somente de `GESTOR` e `FUNCIONARIO` do
+estabelecimento autenticado. O `estabelecimentoId` e o usuário responsável
+vêm do JWT.
+
+| Método | URL | Perfil | Corpo/consulta | Resposta |
+|---|---|---|---|---|
+| POST | `/v1/checkin` | GESTOR, FUNCIONARIO | `{ "eventoId": 1, "codigoIngresso": "X3QFHM87" }` | Resultado `AUTORIZADO` ou falha com `detalhes.resultado` |
+| GET | `/v1/checkin/presentes?eventoId=1&pagina=1&limite=20` | GESTOR, FUNCIONARIO | — | Lista paginada de ingressos utilizados |
+| GET | `/v1/checkin/ausentes?eventoId=1&pagina=1&limite=20` | GESTOR, FUNCIONARIO | — | Lista paginada de ingressos pendentes |
+
+Os resultados de falha são `JA_UTILIZADO`, `ESTORNADO`, `EVENTO_INCORRETO`,
+`EVENTO_INATIVO` e `INGRESSO_INVALIDO`. As respostas não incluem CPF ou
+e-mail.

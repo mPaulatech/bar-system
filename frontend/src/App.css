@@ -455,6 +455,30 @@ td { height: 3.5625rem; padding: 0.4375rem 0.6875rem; color: #d9d7da; border-top
 
 @media (max-width: 560px) {
   html, body { min-width: 360px; }
+
+  .checkin-validacao { overflow: hidden; }
+  .checkin-formulario { display: flex; align-items: flex-end; gap: 0.75rem; padding: 1rem 1.125rem 1.125rem; }
+  .checkin-formulario .campo-modal { flex: 1; }
+  .checkin-formulario input { text-transform: uppercase; letter-spacing: 0.12rem; }
+  .checkin-resultado { display: flex; align-items: center; gap: 0.625rem; margin: 0 1.125rem 1.125rem; padding: 0.75rem; border: 0.0625rem solid; border-radius: 0.3125rem; }
+  .checkin-resultado.autorizado { color: var(--menta); background: #253733; border-color: #3b6657; }
+  .checkin-resultado.recusado { color: #f0a296; background: #392827; border-color: #633d38; }
+  .checkin-resultado div { display: flex; flex-direction: column; gap: 0.1875rem; }
+  .checkin-resultado small { color: #c9c7cb; font-size: 0.5625rem; }
+  .checkin-listas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.875rem; margin-top: 0.875rem; }
+  .checkin-listas .painel { overflow: hidden; }
+  .checkin-listas h2 { display: flex; align-items: center; gap: 0.4375rem; }
+  .checkin-lista { display: flex; flex-direction: column; border-top: 0.0625rem solid #292a2e; }
+  .checkin-linha { display: flex; align-items: center; gap: 0.625rem; min-height: 3.25rem; padding: 0.625rem 1.125rem; color: var(--menta); border-bottom: 0.0625rem solid #292a2e; }
+  .checkin-linha.ausente { color: #e0ad72; }
+  .checkin-linha div { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 0.1875rem; }
+  .checkin-linha strong { overflow: hidden; color: #e5e3e5; font-size: 0.625rem; text-overflow: ellipsis; white-space: nowrap; }
+  .checkin-linha small, .checkin-linha time { color: #8f8e95; font-size: 0.5625rem; }
+  .checkin-linha time { white-space: nowrap; }
+  @media (max-width: 800px) {
+    .checkin-listas { grid-template-columns: minmax(0, 1fr); }
+    .checkin-formulario { align-items: stretch; flex-direction: column; }
+  }
   .acesso { min-height: 100svh; padding: 1.25rem 0.75rem; place-items: start center; }
   .acesso-painel, .acesso-cadastro .acesso-painel { width: 100%; max-height: none; margin: auto 0; padding: 1.6875rem 1.25rem 1.4375rem; border-radius: 0.5625rem; }
   .acesso-painel > .marca { margin-bottom: 1.5625rem; }

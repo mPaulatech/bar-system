@@ -13,6 +13,7 @@ import { criarRotasEstabelecimento } from './modulos/estabelecimento/estabelecim
 import { criarRotasVendasIngressos } from './modulos/vendas-ingressos/vendas-ingressos.rotas.js';
 import { criarRotasClientes } from './modulos/clientes/clientes.rotas.js';
 import { criarRotasConsultaPublica } from './modulos/consulta-publica/consulta-publica.rotas.js';
+import { criarRotasCheckin } from './modulos/checkin/checkin.rotas.js';
 
 /**
  * Monta a aplicação Express com os middlewares e as rotas iniciais.
@@ -57,6 +58,7 @@ export function criarAplicacao(configuracao, dependencias = {}) {
   aplicacao.use('/v1/estabelecimento', criarRotasEstabelecimento({ prisma }));
   aplicacao.use('/v1/clientes', criarRotasClientes({ prisma }));
   aplicacao.use('/v1/vendas-ingressos', criarRotasVendasIngressos({ prisma }));
+  aplicacao.use('/v1/checkin', criarRotasCheckin({ prisma }));
   aplicacao.use(tratamentoErros);
 
   return aplicacao;

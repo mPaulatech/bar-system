@@ -1,4 +1,4 @@
-import type { ClienteParaVenda, DadosCompraPublica, DadosEstabelecimento, DadosEvento, DadosTipoIngresso, DadosVenda, Estabelecimento, EstabelecimentoPublico, Evento, EventoPublico, LoteIngressoPublico, RespostaCompraPublica, RespostaEventos, RespostaVenda, TipoIngresso, UsuarioAutenticado } from '../tipos'
+import type { ClienteParaVenda, DadosCompraPublica, DadosEstabelecimento, DadosEvento, DadosTipoIngresso, DadosVenda, Estabelecimento, EstabelecimentoPublico, Evento, EventoPublico, LoteIngressoPublico, RespostaCheckin, RespostaCompraPublica, RespostaEventos, RespostaListaCheckin, RespostaVenda, TipoIngresso, UsuarioAutenticado } from '../tipos'
 
 const enderecoApi = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/v1'
 
@@ -45,6 +45,7 @@ async function requisicaoApi<T>(rota: string, opcoes: RequestInit = {}): Promise
   if (!resposta.ok) {
     const erro = new Error(corpo.mensagem ?? 'NÃ£o foi possÃ­vel concluir a operaÃ§Ã£o.') as Error & { status?: number }
     erro.status = resposta.status
+    ;(erro as Error & { detalhes?: unknown }).detalhes = (corpo as { detalhes?: unknown }).detalhes
     throw erro
   }
   return corpo
@@ -156,6 +157,21 @@ export function atualizarEstabelecimento(dados: DadosEstabelecimento): Promise<E
     method: 'PATCH',
     body: JSON.stringify(dados),
   })
+}
+
+export function realizarCheckin(eventoId: number, codigoIngresso: string): Promise<RespostaCheckin> {
+  return requisicaoApi<RespostaCheckin>('/checkin', {
+    method: 'POST',
+    body: JSON.stringify({ eventoId, codigoIngresso }),
+  })
+}
+
+export function listarPresentes(eventoId: number, pagina = 1, limite = 20): Promise<RespostaListaCheckin> {
+  return requisicaoApi<RespostaListaCheckin>(`/checkin/presentes?eventoId=${eventoId}&pagina=${pagina}&limite=${limite}`)
+}
+
+export function listarAusentes(eventoId: number, pagina = 1, limite = 20): Promise<RespostaListaCheckin> {
+  return requisicaoApi<RespostaListaCheckin>(`/checkin/ausentes?eventoId=${eventoId}&pagina=${pagina}&limite=${limite}`)
 }
 
 export function entrar(email: string, senha: string): Promise<{ token: string; usuario: UsuarioAutenticado }> {

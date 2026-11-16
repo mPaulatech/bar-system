@@ -175,3 +175,29 @@ export type Estabelecimento = {
 }
 
 export type DadosEstabelecimento = Pick<Estabelecimento, 'nomeFantasia' | 'razaoSocial'>
+
+export type ResultadoCheckin = 'AUTORIZADO' | 'JA_UTILIZADO' | 'ESTORNADO' | 'EVENTO_INCORRETO' | 'EVENTO_INATIVO' | 'INGRESSO_INVALIDO'
+
+export type ItemCheckin = {
+  id: number
+  codigoIngresso: string
+  evento: { id: number; nome: string }
+  ingressoTipo: { nome: string }
+  clienteNome: string | null
+  checkinEm: string | null
+  checkinPorNome: string | null
+}
+
+export type RespostaListaCheckin = {
+  dados: ItemCheckin[]
+  pagina: number
+  limite: number
+  total: number
+  totalPaginas: number
+}
+
+export type RespostaCheckin = {
+  resultado: 'AUTORIZADO'
+  mensagem: string
+  ingresso: ItemCheckin
+}
