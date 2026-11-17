@@ -51,9 +51,16 @@ export type DadosVenda = {
   ingressoTipoId: number
   quantidade: number
   formaPagamento: FormaPagamento
-  clienteId?: number
-  cpf?: string
-  nomeCliente?: string
+  cpf: string
+  nomeCliente: string
+  emailCliente: string
+}
+
+export type ClienteParaVenda = {
+  id: number
+  nome: string
+  cpf: string
+  email: string
 }
 
 export type Venda = {
@@ -69,6 +76,85 @@ export type RespostaVenda = {
   quantidade: number
   valorTotal: string
   formaPagamento: FormaPagamento
+}
+
+export type EstabelecimentoPublico = {
+  identificadorPublico: string
+  nomeFantasia: string
+}
+
+export type EventoPublico = {
+  id: number
+  nome: string
+  generoMusical: string
+  atracoes: string | null
+  dataHora: string
+  duracaoHoras: number
+}
+
+export type LoteIngressoPublico = {
+  id: number
+  nome: string
+  preco: string
+  quantidadeDisponivel: number
+}
+
+export type DadosCompraPublica = {
+  eventoId: number
+  ingressoTipoId: number
+  quantidade: number
+  nome: string
+  cpf: string
+  email: string
+  chaveIdempotencia: string
+  pagamentoSimulado: 'APROVADO' | 'RECUSADO'
+  consentimentoMarketing: boolean
+}
+
+export type IngressoCompraPublica = {
+  id: number
+  valorPago: string
+  formaPagamento: FormaPagamento | null
+  codigoIngresso: string
+  statusVenda: 'CONFIRMADA' | 'ESTORNADA'
+  statusCheckin: 'PENDENTE' | 'UTILIZADO'
+  criadoEm: string
+  estornadaEm: string | null
+  compra: {
+    id: number
+    origem: 'PUBLICA' | 'PDV'
+    statusPagamento: 'PENDENTE' | 'APROVADO' | 'RECUSADO'
+  }
+  evento: {
+    id: number
+    nome: string
+    dataHora: string
+    status: StatusEvento
+  }
+  ingressoTipo: {
+    id: number
+    nome: string
+    preco: string
+  }
+  cliente: {
+    id: number
+    nome: string
+    cpf: string
+    email: string
+  }
+  vendedor: {
+    id: number
+    nome: string
+  } | null
+}
+
+export type RespostaCompraPublica = {
+  compraId: number
+  vendas: IngressoCompraPublica[]
+  quantidade: number
+  valorTotal: string
+  statusPagamento: 'PENDENTE' | 'APROVADO' | 'RECUSADO'
+  emailTransacionalSimulado: boolean
 }
 
 export type UsuarioAutenticado = {
@@ -90,28 +176,28 @@ export type Estabelecimento = {
 
 export type DadosEstabelecimento = Pick<Estabelecimento, 'nomeFantasia' | 'razaoSocial'>
 
-export type ResumoConsumoEvento = {
-  evento: Pick<Evento, 'id' | 'nome' | 'dataHora'>
-  faturamentoBar: string
-  presentesCheckin: number
-  ticketMedioGeral: string | null
+export type ResultadoCheckin = 'AUTORIZADO' | 'JA_UTILIZADO' | 'ESTORNADO' | 'EVENTO_INCORRETO' | 'EVENTO_INATIVO' | 'INGRESSO_INVALIDO'
+
+export type ItemCheckin = {
+  id: number
+  codigoIngresso: string
+  evento: { id: number; nome: string }
+  ingressoTipo: { nome: string }
+  clienteNome: string | null
+  checkinEm: string | null
+  checkinPorNome: string | null
 }
 
-export type ApiKeyEstabelecimento = {
-  apiKey: string
-  apiKeyPrefixo: string
-}
-
-export type ResultadoImportacaoConsumo = {
+export type RespostaListaCheckin = {
+  dados: ItemCheckin[]
+  pagina: number
+  limite: number
   total: number
-  criadas: number
-  repetidas: number
-  resultados: {
-    idTransacaoExterna: string
-    situacao: 'IMPORTADA' | 'JA_EXISTIA'
-    venda: {
-      id: number
-      valorTotal: string
-    }
-  }[]
+  totalPaginas: number
+}
+
+export type RespostaCheckin = {
+  resultado: 'AUTORIZADO'
+  mensagem: string
+  ingresso: ItemCheckin
 }
