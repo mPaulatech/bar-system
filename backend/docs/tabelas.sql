@@ -16,6 +16,8 @@ CREATE TYPE perfil_usuario      AS ENUM ('GESTOR', 'FUNCIONARIO');
 CREATE TYPE status_evento       AS ENUM ('RASCUNHO', 'ATIVO', 'ENCERRADO');
 CREATE TYPE status_venda        AS ENUM ('CONFIRMADA', 'ESTORNADA');
 CREATE TYPE status_checkin      AS ENUM ('PENDENTE', 'UTILIZADO');
+CREATE TYPE origem_venda        AS ENUM ('PDV', 'PUBLICA');
+CREATE TYPE status_pagamento    AS ENUM ('PENDENTE', 'APROVADO', 'RECUSADO');
 CREATE TYPE tipo_restricao      AS ENUM ('DEBITO', 'COMPORTAMENTO', 'OUTRO');
 CREATE TYPE status_restricao    AS ENUM ('ATIVA', 'RESOLVIDA');
 CREATE TYPE tipo_insight        AS ENUM ('PROGRAMACAO', 'PRECIFICACAO', 'RECUPERACAO_CLIENTES', 'CONSUMO');
@@ -26,6 +28,7 @@ CREATE TYPE status_recomendacao AS ENUM ('NOVA', 'VISTA', 'APLICADA', 'DESCARTAD
 -- ---------------------------------------------------------------------------
 CREATE TABLE estabelecimentos (
     id              SERIAL PRIMARY KEY,
+    identificador_publico TEXT      NOT NULL UNIQUE, -- gerado pelo Prisma com cuid()
     nome_fantasia   TEXT          NOT NULL,
     razao_social    TEXT          NOT NULL,
     cnpj            TEXT          NOT NULL UNIQUE,
@@ -86,6 +89,8 @@ CREATE TABLE clientes (
     atualizado_em      TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT uq_clientes_estab_cpf UNIQUE (estabelecimento_id, cpf)
 );
+ALTER TABLE clientes
+    ADD CONSTRAINT uq_clientes_estab_id UNIQUE (estabelecimento_id, id);
 CREATE INDEX idx_clientes_estab_nome ON clientes (estabelecimento_id, nome);
 
 -- ---------------------------------------------------------------------------
@@ -123,6 +128,29 @@ CREATE TABLE ingressos_tipos (
 CREATE INDEX idx_ingressos_tipos_estab_evento ON ingressos_tipos (estabelecimento_id, evento_id);
 
 -- ---------------------------------------------------------------------------
+-- COMPRAS (agrupador de um ou mais ingressos)
+-- ---------------------------------------------------------------------------
+CREATE TABLE compras (
+    id                  SERIAL PRIMARY KEY,
+    estabelecimento_id  INTEGER        NOT NULL REFERENCES estabelecimentos (id),
+    cliente_id          INTEGER,
+    origem              origem_venda   NOT NULL,
+    status_pagamento    status_pagamento NOT NULL DEFAULT 'PENDENTE',
+    chave_idempotencia  TEXT,
+    valor_total         NUMERIC(12,2) NOT NULL,
+    criado_em           TIMESTAMP(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    atualizado_em       TIMESTAMP(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_compras_estab_id UNIQUE (estabelecimento_id, id),
+    CONSTRAINT uq_compras_estab_idempotencia UNIQUE (estabelecimento_id, chave_idempotencia),
+    CONSTRAINT fk_compras_estab_cliente
+        FOREIGN KEY (estabelecimento_id, cliente_id)
+        REFERENCES clientes (estabelecimento_id, id)
+        ON DELETE RESTRICT
+);
+CREATE INDEX idx_compras_estab_origem ON compras (estabelecimento_id, origem);
+CREATE INDEX idx_compras_estab_status ON compras (estabelecimento_id, status_pagamento);
+
+-- ---------------------------------------------------------------------------
 -- VENDAS_INGRESSOS (cada linha é um ingresso vendido)
 -- ---------------------------------------------------------------------------
 CREATE TABLE vendas_ingressos (
@@ -130,8 +158,9 @@ CREATE TABLE vendas_ingressos (
     estabelecimento_id  INTEGER        NOT NULL REFERENCES estabelecimentos (id),
     evento_id           INTEGER        NOT NULL REFERENCES eventos (id),
     ingresso_tipo_id    INTEGER        NOT NULL REFERENCES ingressos_tipos (id),
-    cliente_id          INTEGER        REFERENCES clientes (id),   -- opcional
-    usuario_vendedor_id INTEGER        NOT NULL REFERENCES usuarios (id),
+    compra_id           INTEGER        NOT NULL,
+    cliente_id          INTEGER,                                  -- opcional
+    usuario_vendedor_id INTEGER        REFERENCES usuarios (id),   -- nulo em venda publica
     codigo_ingresso     TEXT           NOT NULL UNIQUE,   -- código curto digitado no check-in
     valor_pago          NUMERIC(12,2)  NOT NULL,
     status_venda        status_venda   NOT NULL DEFAULT 'CONFIRMADA',
@@ -140,10 +169,19 @@ CREATE TABLE vendas_ingressos (
     checkin_em          TIMESTAMP(3),
     checkin_por_id      INTEGER        REFERENCES usuarios (id),
     criado_em           TIMESTAMP(3)   NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    atualizado_em       TIMESTAMP(3)   NOT NULL DEFAULT CURRENT_TIMESTAMP
+    atualizado_em         TIMESTAMP(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_vendas_compra
+        FOREIGN KEY (estabelecimento_id, compra_id)
+        REFERENCES compras (estabelecimento_id, id)
+        ON DELETE RESTRICT,
+    CONSTRAINT fk_vendas_cliente
+        FOREIGN KEY (estabelecimento_id, cliente_id)
+        REFERENCES clientes (estabelecimento_id, id)
+        ON DELETE RESTRICT
 );
 CREATE INDEX idx_vendas_ing_estab_evento  ON vendas_ingressos (estabelecimento_id, evento_id);
 CREATE INDEX idx_vendas_ing_estab_cliente ON vendas_ingressos (estabelecimento_id, cliente_id);
+CREATE INDEX idx_vendas_ing_estab_compra ON vendas_ingressos (estabelecimento_id, compra_id);
 CREATE INDEX idx_vendas_ing_estab_criado  ON vendas_ingressos (estabelecimento_id, criado_em);
 
 -- ---------------------------------------------------------------------------

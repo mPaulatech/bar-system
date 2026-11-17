@@ -11,10 +11,9 @@ import { criarRotasEventos } from './modulos/eventos/eventos.rotas.js';
 import { criarRotasIngressosTipos } from './modulos/ingressos-tipos/ingressos-tipos.rotas.js';
 import { criarRotasEstabelecimento } from './modulos/estabelecimento/estabelecimento.rotas.js';
 import { criarRotasVendasIngressos } from './modulos/vendas-ingressos/vendas-ingressos.rotas.js';
-import {
-  criarRotasImportacaoVendasConsumo,
-  criarRotasVendasConsumo,
-} from './modulos/vendas-consumo/vendas-consumo.rotas.js';
+import { criarRotasClientes } from './modulos/clientes/clientes.rotas.js';
+import { criarRotasConsultaPublica } from './modulos/consulta-publica/consulta-publica.rotas.js';
+import { criarRotasCheckin } from './modulos/checkin/checkin.rotas.js';
 
 /**
  * Monta a aplicação Express com os middlewares e as rotas iniciais.
@@ -39,6 +38,7 @@ export function criarAplicacao(configuracao, dependencias = {}) {
   });
 
   aplicacao.use('/v1/autenticacao', criarRotasAutenticacao({ prisma, configuracao: configuracaoCompleta }));
+  aplicacao.use('/v1/publico', criarRotasConsultaPublica({ prisma }));
   // O limitador geral fica depois das rotas públicas para nunca contar saúde,
   // registro ou login; o login possui um limitador próprio por IP.
   aplicacao.use(rateLimit({
@@ -51,14 +51,14 @@ export function criarAplicacao(configuracao, dependencias = {}) {
       mensagem: 'Limite de requisições excedido. Tente novamente mais tarde.',
     },
   }));
-  aplicacao.use('/v1/integracoes/consumo', criarRotasVendasConsumo({ prisma }));
   aplicacao.use(autenticacao(configuracaoCompleta));
   aplicacao.use('/v1/usuarios', criarRotasUsuarios({ prisma }));
   aplicacao.use('/v1/eventos', criarRotasEventos({ prisma }));
   aplicacao.use('/v1/eventos', criarRotasIngressosTipos({ prisma }));
   aplicacao.use('/v1/estabelecimento', criarRotasEstabelecimento({ prisma }));
+  aplicacao.use('/v1/clientes', criarRotasClientes({ prisma }));
   aplicacao.use('/v1/vendas-ingressos', criarRotasVendasIngressos({ prisma }));
-  aplicacao.use('/v1/vendas-consumo', criarRotasImportacaoVendasConsumo({ prisma }));
+  aplicacao.use('/v1/checkin', criarRotasCheckin({ prisma }));
   aplicacao.use(tratamentoErros);
 
   return aplicacao;

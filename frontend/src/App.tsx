@@ -1,9 +1,11 @@
 import { useState, type FormEvent } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { Building2, CalendarDays, Headphones, LogOut, ShoppingCart } from 'lucide-react'
+import { Building2, CalendarDays, Headphones, LogIn, LogOut, ShoppingCart } from 'lucide-react'
+import Checkin from './pages/Checkin'
 import PaginaEstabelecimento from './pages/Estabelecimento'
 import Eventos from './pages/Eventos'
 import Pdv from './pages/Pdv'
+import Publico from './pages/Publico'
 import { cadastrarCasa, entrar } from './servicos/index'
 import { entrar as entrarSessao, sair, type AppDispatch, type RootState } from './store'
 import './App.css'
@@ -43,10 +45,13 @@ function App() {
   window.onpopstate = () => setRota(window.location.pathname)
   if (rota === '/login') return <Acesso mensagemSucesso={mensagemSucesso} aoIniciarEnvio={() => setMensagemSucesso('')} />
   if (rota === '/cadastro') return <Acesso cadastro aoIniciarEnvio={() => setMensagemSucesso('')} aoCadastrar={() => { setMensagemSucesso('Cadastro realizado com sucesso. Você já pode entrar com o e-mail do gestor.'); window.history.pushState({}, '', '/login'); setRota('/login') }} />
+  const partesRotaPublica = rota.split('/')
+  if (partesRotaPublica[1] === 'publico') return <Publico identificadorPublico={partesRotaPublica.length === 3 ? partesRotaPublica[2] : ''} />
   if (!sessao.token) { window.history.replaceState({}, '', '/login'); return <Acesso aoIniciarEnvio={() => setMensagemSucesso('')} /> }
   const pdv = rota === '/pdv'
+  const checkin = rota === '/checkin'
   const estabelecimento = rota === '/estabelecimento'
   const navegar = (destino: string) => { window.history.pushState({}, '', destino); setRota(destino) }
-  return <div className="aplicativo"><aside className="barra-lateral"><div className="marca"><span className="marca-simbolo"><Headphones size={27} /></span><span className="marca-texto"><strong>BACKSTAGE</strong><span>GESTÃO DE EVENTOS</span></span></div><nav className="navegacao"><button className={`item-menu${!pdv && !estabelecimento ? ' ativo' : ''}`} onClick={() => navegar('/eventos')}><CalendarDays size={23} /> Eventos</button><button className={`item-menu${pdv ? ' ativo' : ''}`} onClick={() => navegar('/pdv')}><ShoppingCart size={23} /> PDV</button>{sessao.usuario?.perfil === 'GESTOR' && <button className={`item-menu${estabelecimento ? ' ativo' : ''}`} onClick={() => navegar('/estabelecimento')}><Building2 size={23} /> Estabelecimento</button>}</nav><button className="item-menu" onClick={() => { dispatch(sair()); setMensagemSucesso(''); navegar('/login') }}><LogOut size={23} /> Sair</button></aside><main className="conteudo-principal"><header className="cabecalho"><span>{pdv ? 'PDV' : estabelecimento ? 'Estabelecimento' : 'Eventos'}</span><span>{sessao.usuario?.nome}</span></header><div className="area-conteudo">{pdv ? <Pdv /> : estabelecimento ? <PaginaEstabelecimento /> : <Eventos />}</div></main></div>
+  return <div className="aplicativo"><aside className="barra-lateral"><div className="marca"><span className="marca-simbolo"><Headphones size={27} /></span><span className="marca-texto"><strong>BACKSTAGE</strong><span>GESTÃO DE EVENTOS</span></span></div>  <nav className="navegacao"><button className={`item-menu${!pdv && !checkin && !estabelecimento ? ' ativo' : ''}`} onClick={() => navegar('/eventos')}><CalendarDays size={23} /> Eventos</button><button className={`item-menu${pdv ? ' ativo' : ''}`} onClick={() => navegar('/pdv')}><ShoppingCart size={23} /> Venda de ingressos</button><button className={`item-menu${checkin ? ' ativo' : ''}`} onClick={() => navegar('/checkin')}><LogIn size={23} /> Check-in</button>{sessao.usuario?.perfil === 'GESTOR' && <button className={`item-menu${estabelecimento ? ' ativo' : ''}`} onClick={() => navegar('/estabelecimento')}><Building2 size={23} /> Estabelecimento</button>}</nav><button className="item-menu" onClick={() => { dispatch(sair()); setMensagemSucesso(''); navegar('/login') }}><LogOut size={23} /> Sair</button></aside><main className="conteudo-principal"><header className="cabecalho"><span>{pdv ? 'Venda de ingressos' : checkin ? 'Check-in' : estabelecimento ? 'Estabelecimento' : 'Eventos'}</span><span>{sessao.usuario?.nome}</span></header><div className="area-conteudo">{pdv ? <Pdv /> : checkin ? <Checkin /> : estabelecimento ? <PaginaEstabelecimento /> : <Eventos />}</div></main></div>
 }
 export default App

@@ -1,4 +1,4 @@
-import type { ApiKeyEstabelecimento, DadosEstabelecimento, DadosEvento, DadosTipoIngresso, DadosVenda, Estabelecimento, Evento, RespostaEventos, RespostaVenda, ResultadoImportacaoConsumo, ResumoConsumoEvento, TipoIngresso, UsuarioAutenticado } from '../tipos'
+import type { ClienteParaVenda, DadosCompraPublica, DadosEstabelecimento, DadosEvento, DadosTipoIngresso, DadosVenda, Estabelecimento, EstabelecimentoPublico, Evento, EventoPublico, LoteIngressoPublico, RespostaCheckin, RespostaCompraPublica, RespostaEventos, RespostaListaCheckin, RespostaVenda, TipoIngresso, UsuarioAutenticado } from '../tipos'
 
 const enderecoApi = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/v1'
 
@@ -26,13 +26,92 @@ async function requisicaoApi<T>(rota: string, opcoes: RequestInit = {}): Promise
       ...opcoes.headers,
     },
   })
-  const corpo = await resposta.json() as T & { mensagem?: string }
+  const tipoConteudo = resposta.headers.get('content-type') ?? ''
+  if (!tipoConteudo.toLowerCase().includes('application/json')) {
+    const erro = new Error(
+      `A API retornou um formato inesperado (${tipoConteudo || 'sem Content-Type'}). Verifique se o backend está em execução e se a rota ${rota} está correta.`,
+    ) as Error & { status?: number }
+    erro.status = resposta.status
+    throw erro
+  }
+  let corpo: T & { mensagem?: string }
+  try {
+    corpo = await resposta.json() as T & { mensagem?: string }
+  } catch {
+    const erro = new Error('A API informou conteúdo JSON inválido.') as Error & { status?: number }
+    erro.status = resposta.status
+    throw erro
+  }
   if (!resposta.ok) {
     const erro = new Error(corpo.mensagem ?? 'NÃ£o foi possÃ­vel concluir a operaÃ§Ã£o.') as Error & { status?: number }
+    erro.status = resposta.status
+    ;(erro as Error & { detalhes?: unknown }).detalhes = (corpo as { detalhes?: unknown }).detalhes
+    throw erro
+  }
+  return corpo
+}
+
+async function requisicaoPublica<T>(rota: string, opcoes: RequestInit = {}): Promise<T> {
+  let resposta: Response
+  try {
+    resposta = await fetch(`${enderecoApi}${rota}`, {
+      ...opcoes,
+      headers: {
+        'Content-Type': 'application/json',
+        ...opcoes.headers,
+      },
+    })
+  } catch {
+    throw new Error('Não foi possível conectar à API. Verifique se o backend está em execução.')
+  }
+
+  const tipoConteudo = resposta.headers.get('content-type') ?? ''
+  if (!tipoConteudo.toLowerCase().includes('application/json')) {
+    const erro = new Error(
+      `A API retornou um formato inesperado (${tipoConteudo || 'sem Content-Type'}). Verifique se o backend está em execução.`,
+    ) as Error & { status?: number }
+    erro.status = resposta.status
+    throw erro
+  }
+
+  let corpo: T & { mensagem?: string }
+  try {
+    corpo = await resposta.json() as T & { mensagem?: string }
+  } catch {
+    const erro = new Error('A API informou conteúdo JSON inválido.') as Error & { status?: number }
+    erro.status = resposta.status
+    throw erro
+  }
+  if (!resposta.ok) {
+    const erro = new Error(corpo.mensagem ?? 'Não foi possível concluir a operação.') as Error & { status?: number }
     erro.status = resposta.status
     throw erro
   }
   return corpo
+}
+
+export function obterEstabelecimentoPublico(identificadorPublico: string): Promise<EstabelecimentoPublico> {
+  return requisicaoPublica<EstabelecimentoPublico>(`/publico/estabelecimentos/${encodeURIComponent(identificadorPublico)}`)
+}
+
+export function listarEventosPublicos(identificadorPublico: string): Promise<EventoPublico[]> {
+  return requisicaoPublica<EventoPublico[]>(`/publico/estabelecimentos/${encodeURIComponent(identificadorPublico)}/eventos`)
+}
+
+export function listarLotesPublicos(identificadorPublico: string, eventoId: number): Promise<LoteIngressoPublico[]> {
+  return requisicaoPublica<LoteIngressoPublico[]>(
+    `/publico/estabelecimentos/${encodeURIComponent(identificadorPublico)}/eventos/${eventoId}/lotes`,
+  )
+}
+
+export function criarCompraPublica(
+  identificadorPublico: string,
+  dados: DadosCompraPublica,
+): Promise<RespostaCompraPublica> {
+  return requisicaoPublica<RespostaCompraPublica>(
+    `/publico/estabelecimentos/${encodeURIComponent(identificadorPublico)}/compras`,
+    { method: 'POST', body: JSON.stringify(dados) },
+  )
 }
 
 export function listarEventos(filtros: { pagina?: number; limite?: number; nome?: string; status?: Evento['status']; generoMusical?: string; dataInicio?: string; dataFim?: string } = {}): Promise<RespostaEventos> {
@@ -65,6 +144,10 @@ export function venderIngresso(dados: DadosVenda): Promise<RespostaVenda> {
   return requisicaoApi<RespostaVenda>('/vendas-ingressos', { method: 'POST', body: JSON.stringify(dados) })
 }
 
+export function obterClienteParaVenda(cpf: string): Promise<ClienteParaVenda> {
+  return requisicaoApi<ClienteParaVenda>(`/clientes/cpf/${encodeURIComponent(cpf)}`)
+}
+
 export function obterEstabelecimento(): Promise<Estabelecimento> {
   return requisicaoApi<Estabelecimento>('/estabelecimento')
 }
@@ -76,52 +159,19 @@ export function atualizarEstabelecimento(dados: DadosEstabelecimento): Promise<E
   })
 }
 
-export function gerarApiKeyEstabelecimento(): Promise<ApiKeyEstabelecimento> {
-  return requisicaoApi<ApiKeyEstabelecimento>('/estabelecimento/api-key', { method: 'POST' })
-}
-
-export async function importarVendasConsumo(arquivo: File): Promise<ResultadoImportacaoConsumo> {
-  if (arquivo.size > 1024 * 1024) {
-    throw new Error('O arquivo deve ter no máximo 1 MB.')
-  }
-
-  const extensao = arquivo.name.split('.').pop()?.toLowerCase()
-  if (extensao === 'csv') {
-    return requisicaoApi<ResultadoImportacaoConsumo>('/vendas-consumo/importacao', {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/csv' },
-      body: await arquivo.text(),
-    })
-  }
-
-  if (extensao !== 'json') {
-    throw new Error('Selecione um arquivo CSV ou JSON.')
-  }
-
-  let dados: unknown
-  try {
-    dados = JSON.parse((await arquivo.text()).replace(/^\uFEFF/, ''))
-  } catch {
-    throw new Error('O arquivo JSON não contém um JSON válido.')
-  }
-
-  if (
-    typeof dados !== 'object'
-    || dados === null
-    || !('vendas' in dados)
-    || !Array.isArray(dados.vendas)
-  ) {
-    throw new Error('O JSON deve conter uma lista de vendas no campo "vendas".')
-  }
-
-  return requisicaoApi<ResultadoImportacaoConsumo>('/vendas-consumo/importacao', {
+export function realizarCheckin(eventoId: number, codigoIngresso: string): Promise<RespostaCheckin> {
+  return requisicaoApi<RespostaCheckin>('/checkin', {
     method: 'POST',
-    body: JSON.stringify(dados),
+    body: JSON.stringify({ eventoId, codigoIngresso }),
   })
 }
 
-export function obterResumoConsumoEvento(eventoId: number): Promise<ResumoConsumoEvento> {
-  return requisicaoApi<ResumoConsumoEvento>(`/eventos/${eventoId}/consumo/resumo`)
+export function listarPresentes(eventoId: number, pagina = 1, limite = 20): Promise<RespostaListaCheckin> {
+  return requisicaoApi<RespostaListaCheckin>(`/checkin/presentes?eventoId=${eventoId}&pagina=${pagina}&limite=${limite}`)
+}
+
+export function listarAusentes(eventoId: number, pagina = 1, limite = 20): Promise<RespostaListaCheckin> {
+  return requisicaoApi<RespostaListaCheckin>(`/checkin/ausentes?eventoId=${eventoId}&pagina=${pagina}&limite=${limite}`)
 }
 
 export function entrar(email: string, senha: string): Promise<{ token: string; usuario: UsuarioAutenticado }> {
@@ -153,7 +203,18 @@ async function requisicaoAutenticacao<T>(rota: string, dados: Record<string, str
     throw new Error('NÃ£o foi possÃ­vel conectar Ã  API. Verifique se o backend estÃ¡ em execuÃ§Ã£o e se o frontend estÃ¡ em http://localhost:5563.')
   }
 
-  const corpo: { mensagem?: string } & T = await resposta.json()
+  const tipoConteudo = resposta.headers.get('content-type') ?? ''
+  if (!tipoConteudo.toLowerCase().includes('application/json')) {
+    throw new Error(
+      `A API de autenticação retornou um formato inesperado (${tipoConteudo || 'sem Content-Type'}).`,
+    )
+  }
+  let corpo: { mensagem?: string } & T
+  try {
+    corpo = await resposta.json()
+  } catch {
+    throw new Error('A API de autenticação informou conteúdo JSON inválido.')
+  }
   if (!resposta.ok) throw new Error(corpo.mensagem ?? 'NÃ£o foi possÃ­vel concluir a operaÃ§Ã£o.')
   return corpo
 }

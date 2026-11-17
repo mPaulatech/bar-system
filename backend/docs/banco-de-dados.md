@@ -14,12 +14,24 @@ Legenda: **PK** = chave primária, **FK** = chave estrangeira (liga a outra tabe
 erDiagram
     ESTABELECIMENTOS {
         int id PK
+        string identificador_publico UK "cuid() do Prisma"
         string nome_fantasia
         string razao_social
         string cnpj UK
         string email_contato
         string api_key_hash UK "opcional, só o hash"
         string api_key_prefixo "opcional"
+        datetime criado_em
+        datetime atualizado_em
+    }
+    COMPRAS {
+        int id PK
+        int estabelecimento_id FK
+        int cliente_id FK "opcional, mesmo estabelecimento"
+        enum origem "PDV | PUBLICA"
+        enum status_pagamento "PENDENTE | APROVADO | RECUSADO"
+        string chave_idempotencia "opcional, unica por estabelecimento"
+        decimal valor_total
         datetime criado_em
         datetime atualizado_em
     }
@@ -86,8 +98,9 @@ erDiagram
         int estabelecimento_id FK
         int evento_id FK
         int ingresso_tipo_id FK
+        int compra_id FK
         int cliente_id FK "opcional"
-        int usuario_vendedor_id FK
+        int usuario_vendedor_id FK "opcional em venda publica"
         string codigo_ingresso UK
         decimal valor_pago
         enum status_venda "CONFIRMADA | ESTORNADA"
@@ -126,11 +139,14 @@ erDiagram
     ESTABELECIMENTOS ||--o{ USUARIOS : "cadastra funcionarios"
     ESTABELECIMENTOS ||--o{ EVENTOS : "organiza"
     ESTABELECIMENTOS ||--o{ CLIENTES : "possui base de"
+    ESTABELECIMENTOS ||--o{ COMPRAS : "recebe"
     ESTABELECIMENTOS ||--o{ RECOMENDACOES_GESTAO : "gera insights"
     EVENTOS ||--o{ INGRESSOS_TIPOS : "tem lotes"
     INGRESSOS_TIPOS ||--o{ VENDAS_INGRESSOS : "define categoria"
     EVENTOS ||--o{ VENDAS_INGRESSOS : "pertence"
     CLIENTES |o--o{ VENDAS_INGRESSOS : "compra"
+    CLIENTES |o--o{ COMPRAS : "identifica"
+    COMPRAS ||--o{ VENDAS_INGRESSOS : "agrupa"
     USUARIOS ||--o{ VENDAS_INGRESSOS : "vende na portaria"
     USUARIOS |o--o{ VENDAS_INGRESSOS : "faz o check-in"
     EVENTOS |o--o{ VENDAS_CONSUMO_API : "associa consumo"
@@ -157,7 +173,8 @@ Todas as tabelas de negócio também ligam ao `ESTABELECIMENTOS` pela coluna `es
 | `clientes` | CPF **único por estabelecimento**; novos `telefone` e `email` (opcionais); `observacao_restricao` saiu | É a "identidade única" da US06. Telefone e e-mail preparam o envio de promoções. As restrições ganharam uma tabela própria (abaixo) |
 | `restricoes_clientes` (**nova**) | tipo, descrição, se bloqueia a entrada, status, quem criou, quem resolveu, datas | Um único campo de texto não guarda histórico nem permite saber quem marcou o cliente. Com a tabela, a restrição resolvida fica registrada e o check-in consegue barrar só quando `bloqueia_entrada = true` |
 | `ingressos_tipos` | novo `estabelecimento_id` (repetido de propósito) | Toda consulta pode filtrar direto por estabelecimento, sem JOIN. Reduz o risco de vazar dado de outra casa |
-| `vendas_ingressos` | `cliente_id` opcional; novos `status_venda` (CONFIRMADA/ESTORNADA), `estornada_em`, `checkin_em`, `checkin_por_id`; `status_checkin` virou enum | Venda na porta pode ser sem cadastro. Estorno não apaga a venda, só muda o status. O check-in registra quando e por quem foi feito |
+| `compras` (**nova**) | agrupador por estabelecimento, `origem`, `status_pagamento`, `chave_idempotencia`, `valor_total` e cliente opcional | Permite distinguir vendas do PDV e públicas, agrupar ingressos e impedir duplicidade por estabelecimento |
+| `vendas_ingressos` | `compra_id` obrigatório; `cliente_id` opcional; `usuario_vendedor_id` opcional; FKs compostas com estabelecimento | Cada ingresso pertence à compra da mesma casa, sem quebrar vendas históricas; venda pública não exige vendedor |
 | `vendas_consumo_api` | `cliente_id` e `evento_id` opcionais; novos `data_hora_transacao`, `itens` (JSON) e `payload_original` (JSON); único `(estabelecimento_id, id_transacao_externa)` | O consumo do bar pode chegar sem CPF ou sem evento, e o cruzamento tenta ligar depois. O horário serve para achar o evento. O par único impede a mesma venda de entrar duas vezes. O JSON original fica para auditoria |
 | `recomendacoes_gestao` | novos `prioridade`, `dados_suporte` (JSON), `status` | O gestor precisa ver os números que justificam a sugestão e marcar se aplicou ou descartou |
 | **todas** | `criado_em` e `atualizado_em` | Sem data não existe KPI por período, série temporal nem auditoria |
@@ -168,7 +185,10 @@ Todas as tabelas de negócio também ligam ao `ESTABELECIMENTOS` pela coluna `es
 - **Sem QR Code:** cada ingresso tem um `codigo_ingresso` curto e aleatório (8 caracteres). A portaria digita esse código no check-in, ou busca o cliente por CPF ou nome.
 - **Índices** começando por `estabelecimento_id`: quase toda consulta do sistema filtra por ele, então o banco já fica rápido onde mais importa.
 - **Nomes em português no código, snake_case no banco**: o `@map` e o `@@map` fazem o Prisma traduzir `estabelecimentoId` (código) para `estabelecimento_id` (coluna), como no seu diagrama.
-- **Vínculo de consumo ao evento:** a integração aceita o `evento_id` indicado pelo PDV ou procura um evento pela data/hora da venda, dentro da duração configurada. Se nenhum evento ou mais de um evento corresponder, o consumo permanece sem evento para não atribuir faturamento incorretamente.
+- **Identificador público do estabelecimento:** `identificador_publico` é único e gerado pelo Prisma com `cuid()`. O `id` inteiro continua interno e não é exposto como identificador público.
+- **Compra e integridade multi-tenant:** `compras` agrupa os ingressos de uma operação, registra `origem`, `status_pagamento`, `valor_total` e a chave de idempotência. As FKs compostas de `estabelecimento_id` com `cliente_id` e `compra_id` impedem ligar uma venda ou compra ao registro de outra casa.
+- **Vendedor opcional:** `usuario_vendedor_id` pode ser nulo em vendas públicas; vendas feitas pelo PDV continuam podendo registrar o funcionário.
+- **PostgreSQL mínimo:** o projeto considera PostgreSQL 13 ou superior. Nesse ambiente `gen_random_uuid()` está disponível sem a criação explícita de `pgcrypto`; a migration só usa a função para preencher identificadores históricos, enquanto novos estabelecimentos usam `cuid()` do Prisma.
 
 ### O que ficou de fora de propósito (MVP)
 - **Tabela de campanhas/promoções:** o sistema segmenta o público e entrega a lista de quem receber a ação. O envio em si (e-mail, WhatsApp) fica para uma versão futura.
@@ -194,9 +214,9 @@ Você precisa de um **PostgreSQL** acessível pela sua API. Para um projeto acad
 ### Minha recomendação
 1. **Desenvolvimento:** Neon (um projeto chamado `dona-bier-dev`), ou PostgreSQL local se você preferir trabalhar offline.
 2. **Testes automáticos:** um segundo projeto no Neon (`dona-bier-teste`), para os testes nunca mexerem nos dados que você usa para desenvolver.
-3. **Apresentação:** use um estabelecimento e dados reais cadastrados pela API.
+3. **Apresentação:** o mesmo Neon do desenvolvimento, com o seed carregado.
 
-Se o grupo trabalha em várias pessoas, usem **um banco Neon em comum** (cada um com a mesma `DATABASE_URL` no seu `.env`) ou, melhor, **cada um com o seu**. Assim ninguém atrapalha o outro.
+Se o grupo trabalha em várias pessoas, usem **um banco Neon em comum** (cada um com a mesma `DATABASE_URL` no seu `.env`) ou, melhor, **cada um com o seu** e todo mundo roda o mesmo `seed`. Assim ninguém atrapalha o outro.
 
 ---
 
@@ -220,9 +240,10 @@ Se o grupo trabalha em várias pessoas, usem **um banco Neon em comum** (cada um
    npx prisma validate          # confere se o schema está correto
    npx prisma format            # organiza a formatação
    npx prisma migrate dev --name inicial   # cria as tabelas no banco
+   npx prisma db seed           # popula com dados de exemplo (depois da etapa 2 do roteiro)
    npx prisma studio            # abre uma interface no navegador para ver as tabelas
    ```
-8. No painel do Neon, aba **Tables**, as tabelas devem aparecer. Compare com o diagrama da seção 1. O banco inicia sem eventos ou dados de demonstração; registre o estabelecimento e o gestor pela rota `POST /v1/autenticacao/registro-estabelecimento`.
+8. No painel do Neon, aba **Tables**, as tabelas devem aparecer. Compare com o diagrama da seção 1.
 
 ### Alternativa: PostgreSQL local
 1. Instale o PostgreSQL pelo instalador oficial (postgresql.org/download) e guarde a senha do usuário `postgres`.
@@ -251,7 +272,7 @@ Se o grupo trabalha em várias pessoas, usem **um banco Neon em comum** (cada um
 ## 6. Cuidados com os dados
 
 - **Nunca** coloque a `DATABASE_URL` no código, no README ou em print. Se vazar, troque a senha no painel do Neon e atualize o `.env`.
-- Os testes usam dados fictícios isolados em memória. Não use dados pessoais reais nos testes; CPF é dado pessoal (LGPD).
+- Use **dados fictícios** no seed e nos testes. CPF de gente real é dado pessoal (LGPD).
 - Gere CPFs de teste válidos com um gerador online, em vez de usar o seu ou o de conhecidos.
 - Planos gratuitos têm backup limitado. Antes de uma entrega importante, exporte uma cópia: `pg_dump "SUA_DATABASE_URL" > backup.sql`.
 - **Antes da apresentação**, acesse a API uma vez (`GET /v1/saude` e uma rota que consulte o banco) para o banco estar "acordado" quando a banca olhar.
@@ -263,7 +284,7 @@ Se o grupo trabalha em várias pessoas, usem **um banco Neon em comum** (cada um
 
 O mesmo modelo, escrito em SQL para PostgreSQL. Está também no arquivo `tabelas.sql`.
 Use para **estudar** o que o Prisma cria por baixo dos panos ou para montar o banco à mão. No projeto, o caminho oficial é o `npx prisma migrate dev`: **não rode os dois no mesmo banco**.
-Testei este SQL num PostgreSQL de teste: as 9 tabelas são criadas sem erro, o CPF repetido no mesmo estabelecimento é recusado e a mesma `id_transacao_externa` não entra duas vezes.
+O SQL documenta as 10 tabelas, a unicidade do CPF por estabelecimento, a rejeição de compra/venda de outro estabelecimento pelas FKs compostas e a idempotência de `id_transacao_externa`. A validação executada nesta etapa foi local, com `prisma validate`, comparação das migrations e testes com `PrismaFake`; a execução em um PostgreSQL real continua pendente.
 
 ```sql
 -- ============================================================================
@@ -284,6 +305,8 @@ CREATE TYPE perfil_usuario      AS ENUM ('GESTOR', 'FUNCIONARIO');
 CREATE TYPE status_evento       AS ENUM ('RASCUNHO', 'ATIVO', 'ENCERRADO');
 CREATE TYPE status_venda        AS ENUM ('CONFIRMADA', 'ESTORNADA');
 CREATE TYPE status_checkin      AS ENUM ('PENDENTE', 'UTILIZADO');
+CREATE TYPE origem_venda        AS ENUM ('PDV', 'PUBLICA');
+CREATE TYPE status_pagamento    AS ENUM ('PENDENTE', 'APROVADO', 'RECUSADO');
 CREATE TYPE tipo_restricao      AS ENUM ('DEBITO', 'COMPORTAMENTO', 'OUTRO');
 CREATE TYPE status_restricao    AS ENUM ('ATIVA', 'RESOLVIDA');
 CREATE TYPE tipo_insight        AS ENUM ('PROGRAMACAO', 'PRECIFICACAO', 'RECUPERACAO_CLIENTES', 'CONSUMO');
@@ -294,6 +317,7 @@ CREATE TYPE status_recomendacao AS ENUM ('NOVA', 'VISTA', 'APLICADA', 'DESCARTAD
 -- ---------------------------------------------------------------------------
 CREATE TABLE estabelecimentos (
     id              SERIAL PRIMARY KEY,
+    identificador_publico TEXT      NOT NULL UNIQUE, -- gerado pelo Prisma com cuid()
     nome_fantasia   TEXT          NOT NULL,
     razao_social    TEXT          NOT NULL,
     cnpj            TEXT          NOT NULL UNIQUE,
@@ -354,6 +378,8 @@ CREATE TABLE clientes (
     atualizado_em      TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT uq_clientes_estab_cpf UNIQUE (estabelecimento_id, cpf)
 );
+ALTER TABLE clientes
+    ADD CONSTRAINT uq_clientes_estab_id UNIQUE (estabelecimento_id, id);
 CREATE INDEX idx_clientes_estab_nome ON clientes (estabelecimento_id, nome);
 
 -- ---------------------------------------------------------------------------
@@ -391,6 +417,29 @@ CREATE TABLE ingressos_tipos (
 CREATE INDEX idx_ingressos_tipos_estab_evento ON ingressos_tipos (estabelecimento_id, evento_id);
 
 -- ---------------------------------------------------------------------------
+-- COMPRAS (agrupador de um ou mais ingressos)
+-- ---------------------------------------------------------------------------
+CREATE TABLE compras (
+    id                  SERIAL PRIMARY KEY,
+    estabelecimento_id  INTEGER        NOT NULL REFERENCES estabelecimentos (id),
+    cliente_id          INTEGER,
+    origem              origem_venda   NOT NULL,
+    status_pagamento    status_pagamento NOT NULL DEFAULT 'PENDENTE',
+    chave_idempotencia  TEXT,
+    valor_total         NUMERIC(12,2) NOT NULL,
+    criado_em           TIMESTAMP(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    atualizado_em       TIMESTAMP(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_compras_estab_id UNIQUE (estabelecimento_id, id),
+    CONSTRAINT uq_compras_estab_idempotencia UNIQUE (estabelecimento_id, chave_idempotencia),
+    CONSTRAINT fk_compras_estab_cliente
+        FOREIGN KEY (estabelecimento_id, cliente_id)
+        REFERENCES clientes (estabelecimento_id, id)
+        ON DELETE RESTRICT
+);
+CREATE INDEX idx_compras_estab_origem ON compras (estabelecimento_id, origem);
+CREATE INDEX idx_compras_estab_status ON compras (estabelecimento_id, status_pagamento);
+
+-- ---------------------------------------------------------------------------
 -- VENDAS_INGRESSOS (cada linha é um ingresso vendido)
 -- ---------------------------------------------------------------------------
 CREATE TABLE vendas_ingressos (
@@ -398,8 +447,9 @@ CREATE TABLE vendas_ingressos (
     estabelecimento_id  INTEGER        NOT NULL REFERENCES estabelecimentos (id),
     evento_id           INTEGER        NOT NULL REFERENCES eventos (id),
     ingresso_tipo_id    INTEGER        NOT NULL REFERENCES ingressos_tipos (id),
-    cliente_id          INTEGER        REFERENCES clientes (id),   -- opcional
-    usuario_vendedor_id INTEGER        NOT NULL REFERENCES usuarios (id),
+    compra_id           INTEGER        NOT NULL,
+    cliente_id          INTEGER,                                  -- opcional
+    usuario_vendedor_id INTEGER        REFERENCES usuarios (id),   -- nulo em venda publica
     codigo_ingresso     TEXT           NOT NULL UNIQUE,   -- código curto digitado no check-in
     valor_pago          NUMERIC(12,2)  NOT NULL,
     status_venda        status_venda   NOT NULL DEFAULT 'CONFIRMADA',
@@ -408,10 +458,19 @@ CREATE TABLE vendas_ingressos (
     checkin_em          TIMESTAMP(3),
     checkin_por_id      INTEGER        REFERENCES usuarios (id),
     criado_em           TIMESTAMP(3)   NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    atualizado_em       TIMESTAMP(3)   NOT NULL DEFAULT CURRENT_TIMESTAMP
+    atualizado_em         TIMESTAMP(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_vendas_compra
+        FOREIGN KEY (estabelecimento_id, compra_id)
+        REFERENCES compras (estabelecimento_id, id)
+        ON DELETE RESTRICT,
+    CONSTRAINT fk_vendas_cliente
+        FOREIGN KEY (estabelecimento_id, cliente_id)
+        REFERENCES clientes (estabelecimento_id, id)
+        ON DELETE RESTRICT
 );
 CREATE INDEX idx_vendas_ing_estab_evento  ON vendas_ingressos (estabelecimento_id, evento_id);
 CREATE INDEX idx_vendas_ing_estab_cliente ON vendas_ingressos (estabelecimento_id, cliente_id);
+CREATE INDEX idx_vendas_ing_estab_compra ON vendas_ingressos (estabelecimento_id, compra_id);
 CREATE INDEX idx_vendas_ing_estab_criado  ON vendas_ingressos (estabelecimento_id, criado_em);
 
 -- ---------------------------------------------------------------------------
