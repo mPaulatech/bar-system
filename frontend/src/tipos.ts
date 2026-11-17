@@ -176,6 +176,33 @@ export type Estabelecimento = {
 
 export type DadosEstabelecimento = Pick<Estabelecimento, 'nomeFantasia' | 'razaoSocial'>
 
+export type ResumoConsumoEvento = {
+  evento: Pick<Evento, 'id' | 'nome' | 'dataHora'>
+  faturamentoBar: string
+  presentesCheckin: number
+  ticketMedioGeral: string | null
+}
+
+export type ResultadoImportacaoConsumo = {
+  total: number
+  criadas: number
+  repetidas: number
+  resultados: {
+    idTransacaoExterna: string
+    situacao: 'IMPORTADA' | 'JA_EXISTIA'
+    venda: {
+      id: number
+      idTransacaoExterna: string
+      valorTotal: string
+      dataHoraTransacao: string
+      eventoId: number | null
+      clienteId: number | null
+      itens: unknown
+      criadoEm: string
+    }
+  }[]
+}
+
 export type ResultadoCheckin = 'AUTORIZADO' | 'JA_UTILIZADO' | 'ESTORNADO' | 'EVENTO_INCORRETO' | 'EVENTO_INATIVO' | 'INGRESSO_INVALIDO'
 
 export type ItemCheckin = {

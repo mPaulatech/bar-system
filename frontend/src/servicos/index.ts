@@ -1,4 +1,4 @@
-import type { ClienteParaVenda, DadosCompraPublica, DadosEstabelecimento, DadosEvento, DadosTipoIngresso, DadosVenda, Estabelecimento, EstabelecimentoPublico, Evento, EventoPublico, LoteIngressoPublico, RespostaCheckin, RespostaCompraPublica, RespostaEventos, RespostaListaCheckin, RespostaVenda, TipoIngresso, UsuarioAutenticado } from '../tipos'
+import type { ClienteParaVenda, DadosCompraPublica, DadosEstabelecimento, DadosEvento, DadosTipoIngresso, DadosVenda, Estabelecimento, EstabelecimentoPublico, Evento, EventoPublico, LoteIngressoPublico, RespostaCheckin, RespostaCompraPublica, RespostaEventos, RespostaListaCheckin, RespostaVenda, ResultadoImportacaoConsumo, ResumoConsumoEvento, TipoIngresso, UsuarioAutenticado } from '../tipos'
 
 const enderecoApi = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/v1'
 
@@ -157,6 +157,51 @@ export function atualizarEstabelecimento(dados: DadosEstabelecimento): Promise<E
     method: 'PATCH',
     body: JSON.stringify(dados),
   })
+}
+
+/**
+ * Gera uma chave para autenticar o sistema de consumo externo.
+ * @returns A chave completa e o prefixo para identificação.
+ */
+export function gerarApiKeyEstabelecimento(): Promise<{ apiKey: string; apiKeyPrefixo: string }> {
+  return requisicaoApi('/estabelecimento/api-key', { method: 'POST' })
+}
+
+/**
+ * Envia um arquivo de vendas do bar para importação pelo gestor.
+ * @param arquivo Arquivo CSV ou JSON com até 1 MB.
+ * @returns Resultado das vendas importadas ou já existentes.
+ */
+export async function importarVendasConsumo(arquivo: File): Promise<ResultadoImportacaoConsumo> {
+  if (arquivo.size > 1024 * 1024) {
+    throw new Error('O arquivo deve ter no máximo 1 MB.')
+  }
+
+  const nomeArquivo = arquivo.name.toLowerCase()
+  const tipoConteudo = nomeArquivo.endsWith('.csv') || arquivo.type === 'text/csv'
+    ? 'text/csv'
+    : nomeArquivo.endsWith('.json') || arquivo.type === 'application/json'
+      ? 'application/json'
+      : null
+
+  if (!tipoConteudo) {
+    throw new Error('Selecione um arquivo CSV ou JSON.')
+  }
+
+  return requisicaoApi<ResultadoImportacaoConsumo>('/vendas-consumo/importacao', {
+    method: 'POST',
+    headers: { 'Content-Type': tipoConteudo },
+    body: await arquivo.text(),
+  })
+}
+
+/**
+ * Consulta o resumo do consumo e dos check-ins de um evento.
+ * @param eventoId Identificador do evento selecionado.
+ * @returns Indicadores de faturamento do bar e ticket médio.
+ */
+export function obterResumoConsumoEvento(eventoId: number): Promise<ResumoConsumoEvento> {
+  return requisicaoApi<ResumoConsumoEvento>(`/eventos/${eventoId}/consumo/resumo`)
 }
 
 export function realizarCheckin(eventoId: number, codigoIngresso: string): Promise<RespostaCheckin> {

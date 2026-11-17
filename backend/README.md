@@ -20,6 +20,20 @@ Todas as rotas abaixo exigem `Authorization: Bearer <token>` e usam o
 `formaPagamento`, `nomeCliente`, `cpf` e `emailCliente`. O CPF é normalizado,
 e o cliente existente é reutilizado somente quando nome e e-mail coincidem.
 
+## Integração e importação de consumo
+
+| Método | URL | Perfil/autenticação | Corpo | Resposta |
+|---|---|---|---|---|
+| POST | `/v1/estabelecimento/api-key` | GESTOR com JWT | — | `{ apiKey, apiKeyPrefixo }`; a chave completa é exibida uma única vez |
+| POST | `/v1/integracoes/consumo` | API Key no cabeçalho `x-api-key` | `{ idTransacaoExterna, valorTotal, dataHoraTransacao, eventoId?, clienteId?, itens? }` | Venda registrada ou existente |
+| POST | `/v1/integracoes/consumo/lote` | API Key no cabeçalho `x-api-key` | `{ vendas: [...] }` | Resultado de cada venda |
+| POST | `/v1/vendas-consumo/importacao` | GESTOR com JWT | Arquivo `text/csv` ou JSON `{ vendas: [...] }` | `{ total, criadas, repetidas, resultados }` |
+| GET | `/v1/eventos/:id/consumo/resumo` | GESTOR com JWT | — | `{ evento, faturamentoBar, presentesCheckin, ticketMedioGeral }` |
+
+O estabelecimento das vendas recebidas por API Key é identificado pela própria
+chave; nunca envie `estabelecimentoId` no corpo. A importação pelo painel aceita
+arquivos de até 1 MB e desfaz o lote inteiro se alguma venda for inválida.
+
 # Consulta pública de eventos e lotes
 
 As rotas abaixo não exigem `Authorization`. O estabelecimento é localizado

@@ -1,0 +1,8 @@
+{
+  "name": "bar-system",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node backend/scripts/desenvolvimento.js"
+  }
+}

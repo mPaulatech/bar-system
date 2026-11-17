@@ -14,6 +14,10 @@ import { criarRotasVendasIngressos } from './modulos/vendas-ingressos/vendas-ing
 import { criarRotasClientes } from './modulos/clientes/clientes.rotas.js';
 import { criarRotasConsultaPublica } from './modulos/consulta-publica/consulta-publica.rotas.js';
 import { criarRotasCheckin } from './modulos/checkin/checkin.rotas.js';
+import {
+  criarRotasImportacaoVendasConsumo,
+  criarRotasVendasConsumo,
+} from './modulos/vendas-consumo/vendas-consumo.rotas.js';
 
 /**
  * Monta a aplicação Express com os middlewares e as rotas iniciais.
@@ -51,7 +55,9 @@ export function criarAplicacao(configuracao, dependencias = {}) {
       mensagem: 'Limite de requisições excedido. Tente novamente mais tarde.',
     },
   }));
+  aplicacao.use('/v1/integracoes/consumo', criarRotasVendasConsumo({ prisma }));
   aplicacao.use(autenticacao(configuracaoCompleta));
+  aplicacao.use('/v1/vendas-consumo', criarRotasImportacaoVendasConsumo({ prisma }));
   aplicacao.use('/v1/usuarios', criarRotasUsuarios({ prisma }));
   aplicacao.use('/v1/eventos', criarRotasEventos({ prisma }));
   aplicacao.use('/v1/eventos', criarRotasIngressosTipos({ prisma }));

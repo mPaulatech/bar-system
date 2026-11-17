@@ -43,11 +43,8 @@ Projeto acadêmico da Fatec Guaratinguetá para gerenciar estabelecimentos, even
 Na raiz do projeto, instale as dependências:
 
 ```bash
-cd backend
-npm install
-
-cd ../frontend
-npm install
+npm install --prefix backend
+npm install --prefix frontend
 ```
 
 Crie `backend/.env` com as configurações abaixo. Substitua os valores de exemplo pelos dados locais do PostgreSQL e por um segredo próprio.
@@ -62,7 +59,6 @@ FRONTEND_URL="http://localhost:5563"
 # Opcionais: estes são os valores padrão
 LOGIN_LIMITE_TENTATIVAS=10
 LOGIN_JANELA_MINUTOS=15
-PORTA_RECOMENDACOES=3001
 ```
 
 Prepare o banco:
@@ -79,25 +75,15 @@ depois, o gestor poderá cadastrar os eventos e os demais dados pela API.
 
 ### Inicialização
 
-Inicie cada processo em um terminal separado:
+Na raiz do projeto, inicie a API e a interface ao mesmo tempo:
 
 ```bash
-# Terminal 1: API
-cd backend
 npm run dev
 ```
 
-```bash
-# Terminal 2: recomendações (opcional)
-cd backend
-npm run recomendacoes:dev
-```
-
-```bash
-# Terminal 3: interface
-cd frontend
-npm run dev
-```
+Pressione `Ctrl+C` para encerrar os dois processos. Atualmente, esse comando
+inicia a API e a interface; o serviço separado de recomendações ainda não tem
+um processo executável configurado no projeto.
 
 A interface fica em `http://localhost:5563`; a API, em `http://localhost:3000`. Para executar os testes da API, use `npm test` dentro de `backend/`.
 
@@ -129,8 +115,6 @@ Use o token retornado para consultar eventos:
 curl http://localhost:3000/v1/eventos \
   -H "Authorization: Bearer SEU_TOKEN_JWT"
 ```
-
-O serviço separado de recomendações, quando iniciado, atende gestores em `GET http://localhost:3001/v1/recomendacoes` com o mesmo cabeçalho de autorização.
 
 ## Licença
 
