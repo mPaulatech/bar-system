@@ -1,7 +1,7 @@
-# Rotas administrativas da API
+# Rotas da API — administrativas e públicas
 
-Todas as rotas abaixo exigem `Authorization: Bearer <token>` e usam o
-`estabelecimentoId` presente no token.
+Todas as rotas administrativas abaixo exigem `Authorization: Bearer <token>`
+e usam o `estabelecimentoId` presente no token.
 
 ## Clientes
 
@@ -15,10 +15,12 @@ Todas as rotas abaixo exigem `Authorization: Bearer <token>` e usam o
 
 ## Vendas de ingressos
 
-`POST /v1/vendas-ingressos` continua disponível para `GESTOR` e
-`FUNCIONARIO`, mas exige `eventoId`, `ingressoTipoId`, `quantidade`,
-`formaPagamento`, `nomeCliente`, `cpf` e `emailCliente`. O CPF é normalizado,
-e o cliente existente é reutilizado somente quando nome e e-mail coincidem.
+| Método | URL | Perfil | Corpo | Resposta |
+|---|---|---|---|---|
+| POST | `/v1/vendas-ingressos` | GESTOR, FUNCIONARIO | `{ eventoId, ingressoTipoId, quantidade, formaPagamento, nomeCliente, cpf, emailCliente }` | Venda registrada |
+
+O CPF é normalizado, e o cliente existente é reutilizado somente quando nome
+e e-mail coincidem.
 
 ## Integração e importação de consumo
 
@@ -34,7 +36,7 @@ O estabelecimento das vendas recebidas por API Key é identificado pela própria
 chave; nunca envie `estabelecimentoId` no corpo. A importação pelo painel aceita
 arquivos de até 1 MB e desfaz o lote inteiro se alguma venda for inválida.
 
-# Consulta pública de eventos e lotes
+## Consulta pública de eventos e lotes
 
 As rotas abaixo não exigem `Authorization`. O estabelecimento é localizado
 somente pelo `identificadorPublico` da URL.
@@ -46,10 +48,15 @@ somente pelo `identificadorPublico` da URL.
 | GET | `/v1/publico/estabelecimentos/:identificadorPublico/eventos/:eventoId/lotes` | Público | — | Lista de lotes disponíveis do evento |
 | POST | `/v1/publico/estabelecimentos/:identificadorPublico/compras` | Público | `{ eventoId, ingressoTipoId, quantidade, nome, cpf, email, chaveIdempotencia, pagamentoSimulado, consentimentoMarketing }` | Compra aprovada e ingressos criados; e-mail somente simulado |
 
-Exemplos:
+### Exemplos
+
+Listar eventos ativos do estabelecimento:
+
+```
+GET /v1/publico/estabelecimentos/dona-bier/eventos
+```
 
 ```json
-GET /v1/publico/estabelecimentos/dona-bier/eventos
 [
   {
     "id": 1,
@@ -62,8 +69,13 @@ GET /v1/publico/estabelecimentos/dona-bier/eventos
 ]
 ```
 
-```json
+Listar lotes disponíveis de um evento:
+
+```
 GET /v1/publico/estabelecimentos/dona-bier/eventos/1/lotes
+```
+
+```json
 [
   {
     "id": 10,
@@ -74,8 +86,13 @@ GET /v1/publico/estabelecimentos/dona-bier/eventos/1/lotes
 ]
 ```
 
-```json
+Realizar uma compra pública:
+
+```
 POST /v1/publico/estabelecimentos/dona-bier/compras
+```
+
+```json
 {
   "eventoId": 1,
   "ingressoTipoId": 10,

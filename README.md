@@ -1,19 +1,6 @@
 # BACKSTAGE — Gestão de eventos e ingressos
 
-Projeto acadêmico da Fatec Guaratinguetá para gerenciar estabelecimentos, eventos e vendas de ingressos. Inclui uma interface web, uma API e um serviço separado de recomendações para gestores.
-
-## Tecnologias
-
-![Node.js](https://img.shields.io/badge/Node.js-20%2B-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)
-![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)
-![Express](https://img.shields.io/badge/Express-000000?style=for-the-badge&logo=express&logoColor=white)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)
-![Prisma](https://img.shields.io/badge/Prisma-2D3748?style=for-the-badge&logo=prisma&logoColor=white)
-![Zod](https://img.shields.io/badge/Zod-3E67B1?style=for-the-badge&logo=zod&logoColor=white)
-![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
-![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
-![Redux Toolkit](https://img.shields.io/badge/Redux_Toolkit-764ABC?style=for-the-badge&logo=redux&logoColor=white)
-![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)
+Projeto acadêmico da Fatec Guaratinguetá para gerenciar estabelecimentos, eventos e vendas de ingressos. Inclui uma interface web, uma API e um serviço de recomendações para gestores (planejado; ainda sem processo executável configurado no projeto).
 
 ## Funcionalidades
 
@@ -26,10 +13,18 @@ Projeto acadêmico da Fatec Guaratinguetá para gerenciar estabelecimentos, even
 
 ## Tecnologias usadas
 
-- **API:** Node.js, JavaScript, Express, PostgreSQL, Prisma e Zod.
-- **Interface:** React, TypeScript, Redux Toolkit e Vite.
-- **Autenticação e proteção:** JWT, bcryptjs, Helmet, CORS e express-rate-limit.
-- **Testes da API:** executor nativo do Node.js (`node --test`).
+- **API**: Node.js, JavaScript, Express, PostgreSQL, Prisma e Zod.
+- **Interface**: React, TypeScript, Redux Toolkit e Vite.
+- **Autenticação e proteção**: JWT, bcryptjs, Helmet, CORS e express-rate-limit.
+- **Testes da API**: executor nativo do Node.js (`node --test`).
+
+## Estrutura do repositório
+
+```
+bar-system/
+├── backend/     # API Node.js/Express, schema Prisma e testes
+└── frontend/    # Interface React/Vite (eventos, PDV, estabelecimento)
+```
 
 ## Como rodar localmente
 
@@ -42,14 +37,14 @@ Projeto acadêmico da Fatec Guaratinguetá para gerenciar estabelecimentos, even
 
 Na raiz do projeto, instale as dependências:
 
-```bash
+```
 npm install --prefix backend
 npm install --prefix frontend
 ```
 
 Crie `backend/.env` com as configurações abaixo. Substitua os valores de exemplo pelos dados locais do PostgreSQL e por um segredo próprio.
 
-```env
+```
 DATABASE_URL="postgresql://USUARIO:SENHA@localhost:5432/bar_system?schema=public"
 JWT_SECRET="substitua-por-um-segredo-com-pelo-menos-16-caracteres"
 JWT_EXPIRA_EM="8h"
@@ -63,33 +58,29 @@ LOGIN_JANELA_MINUTOS=15
 
 Prepare o banco:
 
-```bash
+```
 cd backend
 npx prisma generate
 npx prisma migrate dev
 ```
 
-O projeto não carrega eventos ou outros dados fictícios automaticamente. Cadastre
-o estabelecimento e o gestor reais pela rota `POST /v1/autenticacao/registro-estabelecimento`;
-depois, o gestor poderá cadastrar os eventos e os demais dados pela API.
+O projeto não carrega eventos ou outros dados fictícios automaticamente. Cadastre o estabelecimento e o gestor reais pela rota `POST /v1/autenticacao/registro-estabelecimento`; depois, o gestor poderá cadastrar os eventos e os demais dados pela API.
 
 ### Inicialização
 
 Na raiz do projeto, inicie a API e a interface ao mesmo tempo:
 
-```bash
+```
 npm run dev
 ```
 
-Pressione `Ctrl+C` para encerrar os dois processos. Atualmente, esse comando
-inicia a API e a interface; o serviço separado de recomendações ainda não tem
-um processo executável configurado no projeto.
+Pressione `Ctrl+C` para encerrar os dois processos. Atualmente, esse comando inicia a API e a interface; o serviço separado de recomendações ainda não tem um processo executável configurado no projeto.
 
 A interface fica em `http://localhost:5563`; a API, em `http://localhost:3000`. Para executar os testes da API, use `npm test` dentro de `backend/`.
 
 Se a API estiver em outro endereço, crie `frontend/.env` e configure:
 
-```env
+```
 VITE_API_URL=http://localhost:3000/v1
 ```
 
@@ -97,13 +88,13 @@ VITE_API_URL=http://localhost:3000/v1
 
 Verifique se a API está ativa:
 
-```bash
+```
 curl http://localhost:3000/v1/saude
 ```
 
 Faça login para obter um token:
 
-```bash
+```
 curl -X POST http://localhost:3000/v1/autenticacao/login \
   -H "Content-Type: application/json" \
   -d '{"email":"gestor@exemplo.com","senha":"sua-senha"}'
@@ -111,7 +102,7 @@ curl -X POST http://localhost:3000/v1/autenticacao/login \
 
 Use o token retornado para consultar eventos:
 
-```bash
+```
 curl http://localhost:3000/v1/eventos \
   -H "Authorization: Bearer SEU_TOKEN_JWT"
 ```
