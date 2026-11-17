@@ -6,6 +6,7 @@ import {
   listarEventosAtivos,
   obterEvento,
 } from './eventos.servico.js';
+import { obterResumoConsumoEvento } from '../vendas-consumo/vendas-consumo.servico.js';
 
 export function criarControladorEventos({ prisma }) {
   return {
@@ -31,6 +32,13 @@ export function criarControladorEventos({ prisma }) {
     },
     excluir: async (req, res) => {
       res.json(await excluirEvento(prisma, req.usuario.estabelecimentoId, req.params.id));
+    },
+    resumoConsumo: async (req, res) => {
+      res.json(await obterResumoConsumoEvento(
+        prisma,
+        req.usuario.estabelecimentoId,
+        req.params.id,
+      ));
     },
   };
 }

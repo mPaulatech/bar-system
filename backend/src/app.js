@@ -51,6 +51,7 @@ export function criarAplicacao(configuracao, dependencias = {}) {
       mensagem: 'Limite de requisições excedido. Tente novamente mais tarde.',
     },
   }));
+  aplicacao.use('/v1/integracoes/consumo', criarRotasVendasConsumo({ prisma }));
   aplicacao.use(autenticacao(configuracaoCompleta));
   aplicacao.use('/v1/usuarios', criarRotasUsuarios({ prisma }));
   aplicacao.use('/v1/eventos', criarRotasEventos({ prisma }));
