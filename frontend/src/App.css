@@ -678,4 +678,58 @@ td { height: 3.5625rem; padding: 0.4375rem 0.6875rem; color: #d9d7da; border-top
   .consumo-ajuda { padding-inline: 0.75rem; }
   .acoes-lotes { flex-direction: column; align-items: stretch; }
   .acoes-lotes button { width: 100%; }
+
+/* Shell administrativo redesenhado */
+@media (min-width: 801px) {
+  .barra-lateral { width: 13.75rem; }
+  .area-conteudo { max-width: 70rem; padding: 2.75rem 2.125rem 2rem; }
+  .titulo-secao { margin-bottom: 1.75rem; }
+  .titulo-secao h1 { margin-top: 0.45rem; }
+
+  .acesso { grid-template-columns: 35% 65%; padding: 0; background: #151619; }
+  .acesso-apresentacao { position: relative; display: flex; min-height: 100vh; align-items: flex-start; padding: 2.75rem 3.25rem; border-right: 1px solid #292a2e; }
+  .acesso-apresentacao .marca { padding: 0; }
+  .acesso:not(.acesso-cadastro) { place-items: stretch; }
+  .acesso:not(.acesso-cadastro) .acesso-painel { width: min(70%, 24.5rem); max-height: none; margin: auto; padding: 2.25rem 2.5rem; overflow: visible; background: transparent; border: 0; box-shadow: none; }
+  .acesso:not(.acesso-cadastro) .acesso-painel > .marca { display: none; }
+  .acesso:not(.acesso-cadastro) .acesso-cabecalho { text-align: left; }
+  .acesso-cadastro { place-items: center; padding: 2.5rem 1.25rem; }
+}
+
+@media (max-width: 800px) {
+  .acesso-apresentacao { display: none; }
+}
+
+/* Direção visual aplicada igualmente a todas as telas administrativas */
+.aplicativo { --fundo: #111214; background: #111214; }
+.barra-lateral { background: #17181b; border-right: 1px solid #292a2f; }
+.marca-simbolo { border-radius: 6px; }
+.barra-contexto { margin: 1.35rem 0.55rem 0.55rem; color: #72747b; font-size: 0.52rem; font-weight: 700; letter-spacing: 0.09rem; }
+.navegacao { margin-top: 0.2rem; }
+.item-menu { height: 2.55rem; margin-bottom: 0.18rem; border-radius: 5px; }
+.item-menu.ativo { background: #322724; box-shadow: inset 2px 0 0 var(--coral); }
+.item-menu.ativo::before { display: none; }
+.usuario-lateral { display: flex; align-items: center; gap: 0.55rem; margin: 0 0.35rem 0.55rem; padding: 0.75rem 0.55rem; border-top: 1px solid #303136; border-bottom: 1px solid #303136; }
+.usuario-lateral .avatar-cabecalho { display: grid; width: 1.9rem; height: 1.9rem; flex-basis: 1.9rem; place-items: center; color: #f0d3bf; background: #594638; border: 1px solid #755b48; border-radius: 50%; font-size: 0.58rem; }
+.usuario-lateral div { display: flex; min-width: 0; flex-direction: column; gap: 0.15rem; }
+.usuario-lateral strong { overflow: hidden; color: #dfdde0; font-size: 0.58rem; text-overflow: ellipsis; white-space: nowrap; }
+.usuario-lateral small { color: #85878e; font-size: 0.5rem; }
+.sair-menu { margin-top: 0; }
+.cabecalho { height: 4rem; background: rgba(17,18,20,0.96); }
+.cabecalho-marca { color: #85878e; font-size: 0.62rem; }
+.cabecalho-marca b { margin: 0 0.35rem; color: #4d4f55; }
+.cabecalho-marca strong { color: #ededee; font-weight: 600; }
+.cabecalho-usuario { display: flex; align-items: center; gap: 0.65rem; color: #aaaab0; font-size: 0.58rem; }
+.cabecalho-usuario i { display: grid; width: 1.85rem; height: 1.85rem; place-items: center; color: #f0d3bf; background: #594638; border: 1px solid #755b48; border-radius: 50%; font-style: normal; font-size: 0.58rem; }
+.area-conteudo { max-width: 88rem; }
+.titulo-secao { padding-bottom: 1.15rem; border-bottom: 1px solid #292a2f; }
+.painel, .cartao-estatistica, .pdv-resumo > div { background: #1b1c1f; border-color: #303136; }
+.painel { box-shadow: 0 12px 30px rgba(0,0,0,0.09); }
+.botao-primario { border-radius: 5px; }
+.botao-secundario, .campo-filtro, .campo-modal input, .campo-modal select, .pdv-campo input { border-radius: 5px; }
+
+@media (max-width: 800px) {
+  .usuario-lateral, .barra-contexto { display: none; }
+  .cabecalho-usuario span { display: none; }
+}
 }
