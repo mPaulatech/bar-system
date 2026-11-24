@@ -15,10 +15,10 @@ function normalizarEvento(evento: EventoApi): Evento {
   }
 }
 
-async function requisicaoApi<T>(rota: string, opcoes: RequestInit = {}): Promise<T> {
+async function requisicaoApi<T>(rota: string, opcoes: RequestInit = {}, base = enderecoApi): Promise<T> {
   const sessao = sessionStorage.getItem('sessao')
   const token = sessao ? (JSON.parse(sessao) as { token?: string }).token : undefined
-  const resposta = await fetch(`${enderecoApi}${rota}`, {
+  const resposta = await fetch(`${base}${rota}`, {
     ...opcoes,
     headers: {
       'Content-Type': 'application/json',
@@ -217,6 +217,13 @@ export function listarPresentes(eventoId: number, pagina = 1, limite = 20): Prom
 
 export function listarAusentes(eventoId: number, pagina = 1, limite = 20): Promise<RespostaListaCheckin> {
   return requisicaoApi<RespostaListaCheckin>(`/checkin/ausentes?eventoId=${eventoId}&pagina=${pagina}&limite=${limite}`)
+}
+
+export function enviarMensagemChatbot(mensagem: string): Promise<{ resposta: string }> {
+  return requisicaoApi<{ resposta: string }>('/chatbot', {
+    method: 'POST',
+    body: JSON.stringify({ mensagem }),
+  }, import.meta.env.DEV ? '/api' : enderecoApi)
 }
 
 export function entrar(email: string, senha: string): Promise<{ token: string; usuario: UsuarioAutenticado }> {

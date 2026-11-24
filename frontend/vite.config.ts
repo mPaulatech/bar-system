@@ -7,5 +7,11 @@ export default defineConfig({
   server: {
     port: 5563,
     strictPort: true,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3000',
+        rewrite: (caminho) => caminho.replace(/^\/api/, '/v1'),
+      },
+    },
   },
 })

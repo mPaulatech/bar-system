@@ -18,6 +18,7 @@ import {
   criarRotasImportacaoVendasConsumo,
   criarRotasVendasConsumo,
 } from './modulos/vendas-consumo/vendas-consumo.rotas.js';
+import { criarRotasChatbot } from './routes/chatbot.js';
 
 /**
  * Monta a aplicação Express com os middlewares e as rotas iniciais.
@@ -58,6 +59,7 @@ export function criarAplicacao(configuracao, dependencias = {}) {
   aplicacao.use('/v1/integracoes/consumo', criarRotasVendasConsumo({ prisma }));
   aplicacao.use(autenticacao(configuracaoCompleta));
   aplicacao.use('/v1/vendas-consumo', criarRotasImportacaoVendasConsumo({ prisma }));
+  aplicacao.use('/v1/chatbot', criarRotasChatbot({ prisma }));
   aplicacao.use('/v1/usuarios', criarRotasUsuarios({ prisma }));
   aplicacao.use('/v1/eventos', criarRotasEventos({ prisma }));
   aplicacao.use('/v1/eventos', criarRotasIngressosTipos({ prisma }));
